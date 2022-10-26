@@ -36,11 +36,12 @@ class Notification(models.Model):
 
 class Request(models.Model):
     TYPE_CHOICES = (
-        ('BR', 'Borrow'),
-        ('RT', 'Return'),
-        ('EX', 'Extend'),
-        ('CM', 'Comment')
+        ('BR', 'امانت'),
+        ('RT', 'بازگشت'),
+        ('EX', 'تمدید'),
+        ('CM', 'کامنت')
     )
+
     user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='requestUser')
     book = models.ForeignKey("books.Book", on_delete=models.CASCADE, related_name='requestBook')
     text = models.TextField()
@@ -51,5 +52,5 @@ class Request(models.Model):
 
 
 class AvailableNotification(models.Model):
-    user = models.ManyToManyField(get_user_model(), related_name='availableNotifUser')
-    book = models.ManyToManyField("books.Book", related_name='availableNotifBook')
+    user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='availableNotifUser')
+    book = models.ForeignKey("books.Book", on_delete=models.CASCADE, related_name='availableNotifBook')

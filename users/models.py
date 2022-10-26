@@ -9,3 +9,5 @@ class BookUser(AbstractUser):
     phone_number = models.CharField(max_length=11)
     telegram_id = models.CharField(max_length=35, unique=True)
 
+    def __str__(self):
+        return f'{self.first_name} {self.last_name}'

@@ -19,7 +19,7 @@ class Book(models.Model):
     wanted_to_read = models.PositiveIntegerField(default=0)
 
     def __str__(self):
-        return f'{self.name}' + '->' + f'{self.owner.name}'
+        return f'{self.name}' + '->' + f'{self.owner.username}'
 
 
 class BookCategory(models.Model):
