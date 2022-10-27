@@ -44,10 +44,10 @@ class Request(models.Model):
 
     user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='requestUser')
     book = models.ForeignKey("books.Book", on_delete=models.CASCADE, related_name='requestBook')
-    text = models.TextField()
     type = models.CharField(max_length=2, choices=TYPE_CHOICES)
     created = models.DateTimeField(auto_now_add=True)
-    is_read = models.BooleanField()
+    metadata = models.JSONField(null=True, blank=True, default=None)
+    is_read = models.BooleanField(default=False)
     is_accepted = models.BooleanField(default=None, null=True)
 
 

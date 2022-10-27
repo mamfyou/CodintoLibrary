@@ -1,10 +1,14 @@
 from django.contrib.auth import get_user_model
 from django.db import models
-
+import os.path
+from PIL import Image
+from io import BytesIO
+from django.core.files.base import ContentFile
 
 class Book(models.Model):
     name = models.CharField(max_length=100)
     picture = models.ImageField(upload_to='media/book_pic')
+    thumbnail = models.ImageField(upload_to='media/thumbnails', editable=False)
     description = models.TextField()
     owner = models.ForeignKey(get_user_model(), on_delete=models.PROTECT, related_name='bookOwner')
     author = models.CharField(max_length=100)
@@ -20,6 +24,44 @@ class Book(models.Model):
 
     def __str__(self):
         return f'{self.name}' + '->' + f'{self.owner.username}'
+
+    def save(self, *args, **kwargs):
+
+        if not self.make_thumbnail():
+            # set to a default thumbnail
+            raise Exception('Could not create thumbnail - is the file type valid?')
+
+        super(Book, self).save(*args, **kwargs)
+
+    def make_thumbnail(self):
+
+        image = Image.open(self.picture)
+        image.thumbnail((128, 128), Image.ANTIALIAS)
+
+        thumb_name, thumb_extension = os.path.splitext(self.picture.name)
+        thumb_extension = thumb_extension.lower()
+
+        thumb_filename = thumb_name + '_thumb' + thumb_extension
+
+        if thumb_extension in ['.jpg', '.jpeg']:
+            FTYPE = 'JPEG'
+        elif thumb_extension == '.gif':
+            FTYPE = 'GIF'
+        elif thumb_extension == '.png':
+            FTYPE = 'PNG'
+        else:
+            return False  # Unrecognized file type
+
+        # Save thumbnail to in-memory file as StringIO
+        temp_thumb = BytesIO()
+        image.save(temp_thumb, FTYPE)
+        temp_thumb.seek(0)
+
+        # set save=False, otherwise it will run in an infinite loop
+        self.thumbnail.save(thumb_filename, ContentFile(temp_thumb.read()), save=False)
+        temp_thumb.close()
+
+        return True
 
 
 class BookCategory(models.Model):

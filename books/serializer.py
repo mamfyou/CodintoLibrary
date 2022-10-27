@@ -1,7 +1,9 @@
-import os
+import re
 from datetime import datetime, date
 
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
+
 from books.models import Book, BookCategory, Comment, Rate
 from process.models import AvailableNotification, History, Request
 
@@ -52,7 +54,7 @@ class BookComplexSerializer(serializers.ModelSerializer):
         model = Book
         fields = ['id', 'picture', 'name', 'author', 'owner', 'publisher', 'publish_date', 'volume_num', 'page_count',
                   'translator', 'category', 'description', 'bookComment', 'is_available', 'has_available_notif',
-                  'has_borrowed', 'deadline', 'has_sent_request']
+                  'has_borrowed', 'deadline', 'has_sent_request', 'has_commented']
 
     def get_category(self, obj: Book):
         cat_holder = []
@@ -99,6 +101,12 @@ class BookComplexSerializer(serializers.ModelSerializer):
             return (history.first().end_date - date.today()).days
         return None
 
+    def get_has_commented(self, obj: Book):
+        return History.objects.filter(user=self.context['user'],
+                                      book=obj,
+                                      is_active=False,
+                                      is_accepted=False)
+
     category = serializers.SerializerMethodField(method_name='get_category')
     bookComment = CommentSerializer(many=True)
     is_available = serializers.SerializerMethodField(method_name='get_is_available')
@@ -106,6 +114,160 @@ class BookComplexSerializer(serializers.ModelSerializer):
     has_borrowed = serializers.SerializerMethodField(method_name='get_has_borrowed')
     deadline = serializers.SerializerMethodField(method_name='get_deadline')
     has_sent_request = serializers.SerializerMethodField(method_name='get_has_sent_request')
+    has_commented = serializers.SerializerMethodField(method_name='get_has_commented')
+
+
+class BookBorrowSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Book
+        fields = ['id', 'thumbnail', 'name', 'author', 'end_date']
+        read_only_fields = ['id', 'thumbnail', 'name', 'author']
+
+    end_date = serializers.IntegerField(write_only=True)
+    thumbnail = serializers.SerializerMethodField(method_name='get_thumbnail')
+
+    def get_thumbnail(self, obj):
+        book = Book.objects.get(id=self.context['book_id'])
+        request = self.context['request']
+        photo_url = book.thumbnail.url
+        return request.build_absolute_uri(photo_url)
+
+    def create(self, validated_data):
+        book = Book.objects.get(id=self.context['book_id'])
+        History.objects.create(
+            user=self.context['user'],
+            book=book,
+            start_date=date.today(),
+            end_date=date.today(),
+        )
+        Request.objects.create(
+            type='BR',
+            user=self.context['user'],
+            book=book,
+            metadata=validated_data
+        )
+        return validated_data
+
+    def validate(self, data):
+        print(data.get('end_date'))
+        has_request = Request.objects.filter(user=self.context['user'],
+                                             is_accepted__isnull=True,)
+
+        has_book = History.objects.filter(user=self.context['user'],
+                                          is_active=True,
+                                          is_accepted=True)
+        if data.get('end_date') not in [14, 30]:
+            raise ValidationError('تاریخ انتخاب شده صحیح نمیباشد')
+        elif has_request.filter(book_id=self.context['book_id']).exists():
+            raise ValidationError('شما یک بار برای این کتاب ثبت درخواست کرده اید! لطفا تا پاسخگویی ادمین صبور باشید 🙏')
+        elif has_book.filter(book_id=self.context['book_id']).exists():
+            raise ValidationError('شما این کتاب را به امانت برده اید!')
+        elif has_request.filter(type='BR').count() + has_book.count() >= 2:
+            raise ValidationError('شما تا الان دو کتاب تایید شده یا در انتظار تایید دارید!')
+        return data
+
+
+class BookExtendSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Book
+        fields = ['id', 'thumbnail', 'name', 'author', 'extend_time']
+        read_only_fields = ['id', 'thumbnail', 'name', 'author']
+
+    extend_time = serializers.IntegerField(write_only=True)
+    thumbnail = serializers.SerializerMethodField(method_name='get_thumbnail')
+
+    def get_thumbnail(self, obj: Book):
+        book = Book.objects.get(id=self.context['book_id'])
+        request = self.context['request']
+        photo_url = book.thumbnail.url
+        return request.build_absolute_uri(photo_url)
+
+    def create(self, validated_data):
+        book = Book.objects.get(id=self.context['book_id'])
+        Request.objects.create(
+            type='EX',
+            user=self.context['user'],
+            book=book,
+            metadata=validated_data,
+        )
+        return validated_data
+
+    def validate(self, data):
+        book = Book.objects.get(id=self.context['book_id'])
+        has_book = History.objects.filter(user=self.context['user'],
+                                          book=book,
+                                          is_active=True,
+                                          is_accepted=True)
+        has_request = Request.objects.filter(is_accepted__isnull=True,
+                                             user=self.context['user'],
+                                             book=book)
+        if not has_book.exists():
+            raise ValidationError('شما هنوز این کتاب را به امانت نبرده اید!')
+        elif has_book.filter(is_extended=True).exists():
+            raise ValidationError('شما یک بار این کتاب را تمدید کرده اید!')
+        elif has_request.filter(type='EX').exists():
+            raise ValidationError('شما یک بار برای این کتاب ثبت درخواست کرده اید! لطفا تا پاسخگویی ادمین صبور باشید 🙏')
+        elif has_request.exists():
+            raise ValidationError('شما یک درخواست دیگر برای این کتاب دارید! لطفا تا پاسخگویی ادمین صبور باشید 🙏')
+
+
+class BookReturnSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Book
+        fields = ['id', 'thumbnail', 'name', 'author', 'rate', 'comment', 'is_not_read']
+        read_only_fields = ['id', 'thumbnail', 'name', 'author']
+
+    thumbnail = serializers.SerializerMethodField(method_name='get_thumbnail')
+    rate = serializers.IntegerField(write_only=True, required=False)
+    comment = serializers.CharField(write_only=True, required=False)
+    is_not_read = serializers.BooleanField(write_only=True)
+
+    def get_thumbnail(self):
+        book = Book.objects.get(id=self.context['book_id'])
+        request = self.context['request']
+        photo_url = book.thumbnail.url
+        return request.build_absolute_uri(photo_url)
+
+    def create(self, validated_data):
+        Request.objects.create(
+            type='RT',
+            user=self.context['user'],
+            book_id=self.context['book_id'],
+        )
+        if validated_data.get('is_not_read') is False:
+            Request.objects.create(
+                type='CM',
+                user=self.context['user'],
+                book_id=self.context['book_id'],
+                metadata={'rate': validated_data['rate'], 'comment': validated_data['comment']}
+            )
+        return validated_data
+
+    def validate(self, data):
+
+        book = Book.objects.get(id=self.context['book_id'])
+        has_book = History.objects.filter(user=self.context['user'],
+                                          book=book,
+                                          is_active=True,
+                                          is_accepted=True)
+        has_request = Request.objects.filter(is_accepted__isnull=True,
+                                             user=self.context['user'],
+                                             book=book)
+        if data.get('is_not_read') is False and (data.get('rate') is None or data.get('comment') is None):
+            raise ValidationError('لطفا امتیاز و نظر خود را وارد کنید!')
+        elif data.get('is_not_read') is True and (data['rate'] is not None or data['comment'] is not None):
+            raise ValidationError('شما نمیتوانید بدون خواندن کتاب به آن نظر دهید!')
+        elif data.get('rate') not in [1, 2, 3, 4, 5]:
+            raise ValidationError('امتیاز باید عدد صحیحی بین 1 تا 5 باشد!')
+        elif re.search(r'[a-zA-Z]', data.get('comment')):
+            raise ValidationError('نظر شما باید به زبان فارسی باشد!')
+        elif not has_book.exists():
+            raise ValidationError('شما هنوز این کتاب را به امانت نبرده اید!')
+        elif has_request.filter(type='RT').exists():
+            raise ValidationError('شما یک بار برای این کتاب ثبت درخواست کرده اید! لطفا تا پاسخگویی ادمین صبور باشید 🙏')
+        elif has_request.exists():
+            raise ValidationError('شما یک درخواست دیگر برای این کتاب دارید! لطفا تا پاسخگویی ادمین صبور باشید 🙏')
+        return data
 
 
 class MainPageSerializer(serializers.Serializer):
