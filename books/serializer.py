@@ -1,10 +1,12 @@
 import re
-from datetime import datetime, date
+from datetime import date
 
+from django.db.models import F
+from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from books.models import Book, BookCategory, Comment, Rate
+from books.models import Book, BookCategory, Comment, Rate, LikeHistory, DislikeHistory
 from process.models import AvailableNotification, History, Request
 
 
@@ -151,7 +153,7 @@ class BookBorrowSerializer(serializers.ModelSerializer):
     def validate(self, data):
         print(data.get('end_date'))
         has_request = Request.objects.filter(user=self.context['user'],
-                                             is_accepted__isnull=True,)
+                                             is_accepted__isnull=True, )
 
         has_book = History.objects.filter(user=self.context['user'],
                                           is_active=True,
@@ -244,7 +246,6 @@ class BookReturnSerializer(serializers.ModelSerializer):
         return validated_data
 
     def validate(self, data):
-
         book = Book.objects.get(id=self.context['book_id'])
         has_book = History.objects.filter(user=self.context['user'],
                                           book=book,
@@ -267,6 +268,74 @@ class BookReturnSerializer(serializers.ModelSerializer):
             raise ValidationError('شما یک بار برای این کتاب ثبت درخواست کرده اید! لطفا تا پاسخگویی ادمین صبور باشید 🙏')
         elif has_request.exists():
             raise ValidationError('شما یک درخواست دیگر برای این کتاب دارید! لطفا تا پاسخگویی ادمین صبور باشید 🙏')
+        return data
+
+
+class BookCommentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Comment
+        fields = ['rate', 'id', 'user', 'book', 'text', 'created_at', 'Rate', 'like_count', 'dislike_count']
+        read_only_fields = ['id', 'user', 'book', 'created_at', 'Rate', 'like_count', 'dislike_count']
+
+    def get_book_rate(self, obj):
+        rate_obj = Rate.objects.filter(user=self.context['user'], book_id=self.context['book_id'])
+        if rate_obj.exists():
+            return rate_obj.first().rate
+        return None
+
+    Rate = serializers.SerializerMethodField(method_name='get_book_rate')
+    rate = serializers.IntegerField(write_only=True)
+
+    def create(self, validated_data):
+        Request.objects.create(user=self.context['user'], book=Book.objects.get(id=self.context['book_id']), type='CM',
+                               metadata=validated_data)
+        return validated_data
+
+    def validate(self, data):
+        if data.get('rate') not in [1, 2, 3, 4, 5]:
+            raise ValidationError('امتیاز باید عدد صحیحی بین 1 تا 5 باشد!')
+        elif re.search(r'[a-zA-Z]', data.get('text')):
+            raise ValidationError('نظر شما باید به زبان فارسی باشد!')
+        elif Request.objects.filter(type='CM', user=self.context['user'], book_id=self.context['book_id']).exists():
+            raise ValidationError('شما یک درخواست کامنت ثبت کرده اید! لطفا تا پاسخگویی ادمین صبور باشید 🙏')
+        return data
+
+
+class CommentFeedbackSerializer(serializers.Serializer):
+    like = serializers.BooleanField()
+    dislike = serializers.BooleanField()
+
+    def update(self, obj, validated_data):
+        like_queryset = LikeHistory.objects.filter(user=self.context.get('user'),
+                                                   comment_id=self.context.get('comment'))
+        dislike_queryset = DislikeHistory.objects.filter(user=self.context.get('user'),
+                                                         comment_id=self.context.get('comment'))
+        comment_obj = Comment.objects.filter(id=self.context.get('comment'))
+        if validated_data.get('like'):
+            if like_queryset.exists():
+                comment_obj.update(like_count=F('like_count') - 1)
+                like_queryset.delete()
+            else:
+                if dislike_queryset.exists():
+                    comment_obj.update(dislike_count=F('dislike_count') - 1)
+                    dislike_queryset.delete()
+                comment_obj.update(like_count=F('like_count') + 1)
+                LikeHistory.objects.create(user=self.context.get('user'), comment=comment_obj.first())
+        elif validated_data.get('dislike'):
+            if dislike_queryset.exists():
+                comment_obj.update(dislike_count=F('like_count') - 1)
+                dislike_queryset.delete()
+            else:
+                if like_queryset.exists():
+                    comment_obj.update(like_count=F('like_count') - 1)
+                    like_queryset.delete()
+                comment_obj.update(dislike_count=F('like_count') + 1)
+                DislikeHistory.objects.create(user=self.context.get('user'), comment=comment_obj.first())
+        return validated_data
+
+    def validate(self, data):
+        if data.get('like') is True and data.get('dislike') is True:
+            raise ValidationError('نمیتوانید همزمان هم لایک هم دیسلایک کنید!')
         return data
 
 

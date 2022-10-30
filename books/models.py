@@ -5,6 +5,7 @@ from PIL import Image
 from io import BytesIO
 from django.core.files.base import ContentFile
 
+
 class Book(models.Model):
     name = models.CharField(max_length=100)
     picture = models.ImageField(upload_to='media/book_pic')
@@ -83,6 +84,7 @@ class Rate(models.Model):
 class Comment(models.Model):
     user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='userComment')
     book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name='bookComment')
+    # rate = models.OneToOneField(Rate, on_delete=models.CASCADE, related_name='rateComment', null=True, blank=True)
     text = models.TextField(max_length=500, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     like_count = models.PositiveIntegerField(default=0)
@@ -90,3 +92,13 @@ class Comment(models.Model):
 
     def __str__(self):
         return str(self.user) + " -> " + str(self.book)
+
+
+class LikeHistory(models.Model):
+    comment = models.ForeignKey(Comment, on_delete=models.CASCADE, related_name='commentLike')
+    user = models.ForeignKey(get_user_model(), on_delete=models.PROTECT, related_name='likeUser')
+
+
+class DislikeHistory(models.Model):
+    comment = models.ForeignKey(Comment, on_delete=models.CASCADE, related_name='commentDislike')
+    user = models.ForeignKey(get_user_model(), on_delete=models.PROTECT, related_name='DislikeUser')
