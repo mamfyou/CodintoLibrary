@@ -24,6 +24,7 @@ class Notification(models.Model):
         ('TW', 'Time Warning'),
         ('GN', 'General'),
         ('AV', 'Available'),
+        ('CM', 'Comment'),
     )
     type = models.CharField(max_length=2, choices=TYPE_CHOICES, default='GN')
     title = models.CharField(max_length=50)
@@ -39,7 +40,7 @@ class Request(models.Model):
         ('BR', 'امانت'),
         ('RT', 'بازگشت'),
         ('EX', 'تمدید'),
-        ('CM', 'کامنت')
+        ('CM', 'کامنت'),
     )
 
     user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='requestUser')

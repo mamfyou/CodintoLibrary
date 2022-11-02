@@ -81,10 +81,10 @@ class CommentBook(ListModelMixin, CreateModelMixin, GenericViewSet, UpdateModelM
     lookup_field = 'pk'
 
     def get_queryset(self):
-        comment_queryset = Comment.objects.filter(book_id=self.kwargs['book_pk'], user=self.request.user)
-        if comment_queryset.exists():
+        comment_queryset = Comment.objects.filter(book_id=self.kwargs['book_pk'])
+        if self.kwargs.get('pk') is not None:
             return comment_queryset
-        return None
+        return comment_queryset.filter(user=self.request.user)
 
     def get_serializer_class(self):
         if self.kwargs.get('pk') is None:
@@ -102,3 +102,10 @@ class CommentBook(ListModelMixin, CreateModelMixin, GenericViewSet, UpdateModelM
         headers = self.get_success_headers(serializer.data)
         return Response({'message': 'درخواست شما با موفقیت ثبت شد! برای پاسخ ادمین منتظر باشید 🙏'},
                         status=status.HTTP_201_CREATED, headers=headers)
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        if queryset is None:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        return Response(serializer.data)
