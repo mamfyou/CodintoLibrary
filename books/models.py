@@ -18,7 +18,7 @@ class Book(models.Model):
     translator = models.CharField(max_length=100, null=True, blank=True)
     page_count = models.PositiveIntegerField()
     volume_num = models.PositiveIntegerField()
-    count = models.PositiveIntegerField()
+    count = models.PositiveIntegerField(default=1)
     created_at = models.DateField(auto_now_add=True)
     category = models.ManyToManyField('BookCategory', related_name='bookCategory')
     wanted_to_read = models.PositiveIntegerField(default=0)

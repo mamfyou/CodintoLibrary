@@ -4,7 +4,7 @@ from rest_framework import serializers
 
 from books.models import Book, Comment
 from .models import Bookshelf
-from process.models import History, Notification
+from process.models import History, Notification, Request
 
 
 class PanelMainPageSerializer(serializers.ModelSerializer):
@@ -75,11 +75,25 @@ class BookSimpleSerializer(serializers.ModelSerializer):
 class CommentPanelSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comment
-        fields = ['book', 'comment']
+        fields = ['book', 'comment', 'comment_id']
 
+    comment_id = serializers.IntegerField(source='id', read_only=True)
     comment = serializers.CharField(source='text')
-    book = BookSimpleSerializer()
+    book = BookSimpleSerializer(read_only=True)
 
+    def update(self, instance, validated_data):
+        Request.objects.create(type='CM', metadata={'comment': validated_data.get('text')}, user=instance.user,
+                               book=instance.book)
+        return validated_data
+    def validate(self, data):
+        farsi_pattern = re.compile(r'[\u0600-\u06FF]+')
+        eng = re.compile(r'[A-Za-z]')
+        if data.get('text') is None:
+            raise serializers.ValidationError('کامنت نمیتواند خالی باشد')
+        elif re.search('[A-Za-z]', data.get('text')):
+            raise serializers.ValidationError('کامنت باید به زبان فارسی باشد')
+        elif Request.objects.filter(type='CM', user=self.instance.user, book=self.instance.book, is_accepted__isnull=True):
+            raise serializers.ValidationError('شما یک درخواست در انتظار پاسخ دارید')
 
 class PanelCommentsSerializer(serializers.ModelSerializer):
     class Meta:

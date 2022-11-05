@@ -1,5 +1,5 @@
 import re
-from datetime import date
+from datetime import date, datetime, timedelta
 
 from django.db.models import F
 from django.shortcuts import get_object_or_404
@@ -107,7 +107,7 @@ class BookComplexSerializer(serializers.ModelSerializer):
         return History.objects.filter(user=self.context['user'],
                                       book=obj,
                                       is_active=False,
-                                      is_accepted=False)
+                                      is_accepted=True).exists()
 
     category = serializers.SerializerMethodField(method_name='get_category')
     bookComment = CommentSerializer(many=True)
@@ -140,7 +140,7 @@ class BookBorrowSerializer(serializers.ModelSerializer):
             user=self.context['user'],
             book=book,
             start_date=date.today(),
-            end_date=date.today(),
+            end_date=datetime.now() + timedelta(days=validated_data['end_date']),
         )
         Request.objects.create(
             type='BR',
@@ -151,7 +151,7 @@ class BookBorrowSerializer(serializers.ModelSerializer):
         return validated_data
 
     def validate(self, data):
-        print(data.get('end_date'))
+        book = Book.objects.get(id=self.context['book_id'])
         has_request = Request.objects.filter(user=self.context['user'],
                                              is_accepted__isnull=True, )
 
@@ -160,6 +160,8 @@ class BookBorrowSerializer(serializers.ModelSerializer):
                                           is_accepted=True)
         if data.get('end_date') not in [14, 30]:
             raise ValidationError('تاریخ انتخاب شده صحیح نمیباشد')
+        elif book.count == 0:
+            raise ValidationError('کتاب مورد نظر موجود نمیباشد')
         elif has_request.filter(book_id=self.context['book_id']).exists():
             raise ValidationError('شما یک بار برای این کتاب ثبت درخواست کرده اید! لطفا تا پاسخگویی ادمین صبور باشید 🙏')
         elif has_book.filter(book_id=self.context['book_id']).exists():
@@ -211,6 +213,7 @@ class BookExtendSerializer(serializers.ModelSerializer):
             raise ValidationError('شما یک بار برای این کتاب ثبت درخواست کرده اید! لطفا تا پاسخگویی ادمین صبور باشید 🙏')
         elif has_request.exists():
             raise ValidationError('شما یک درخواست دیگر برای این کتاب دارید! لطفا تا پاسخگویی ادمین صبور باشید 🙏')
+        return data
 
 
 class BookReturnSerializer(serializers.ModelSerializer):
@@ -224,7 +227,7 @@ class BookReturnSerializer(serializers.ModelSerializer):
     comment = serializers.CharField(write_only=True, required=False)
     is_not_read = serializers.BooleanField(write_only=True)
 
-    def get_thumbnail(self):
+    def get_thumbnail(self, obj):
         book = Book.objects.get(id=self.context['book_id'])
         request = self.context['request']
         photo_url = book.thumbnail.url
