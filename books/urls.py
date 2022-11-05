@@ -13,6 +13,7 @@ nested_router.register('return', ReturnBook, basename='return-book')
 
 
 urlpatterns = [
+    path('books/search/', BookSearch.as_view(), name='book-search'),
     path('', include(router.urls)),
     path('', include(nested_router.urls)),
 ]

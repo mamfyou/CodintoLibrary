@@ -1,7 +1,7 @@
 import re
 from datetime import date, datetime, timedelta
 
-from django.db.models import F
+from django.db.models import F, Avg
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -350,7 +350,8 @@ class MainPageSerializer(serializers.Serializer):
 
     def get_popular_books(self, obj):
         context = {'request': self.context.get('request')}
-        return BookSimpleSerializer(Book.objects.all().order_by('-bookRate')[:10], many=True, context=context).data
+        queryset = Book.objects.annotate(avg_rate=Avg('bookRate__rate')).order_by('-avg_rate')
+        return BookSimpleSerializer(queryset[:10], many=True, context=context).data
 
     def get_most_borrowed(self, obj):
         context = {'request': self.context.get('request')}
@@ -360,3 +361,9 @@ class MainPageSerializer(serializers.Serializer):
     new_books = serializers.SerializerMethodField(method_name='get_new_books')
     popular_books = serializers.SerializerMethodField(method_name='get_popular_books')
     most_borrowed_books = serializers.SerializerMethodField(method_name='get_most_borrowed')
+
+
+class BookSearchSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Book
+        fields = ['id', 'name', 'author', 'owner', 'publisher']

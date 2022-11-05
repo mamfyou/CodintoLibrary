@@ -1,12 +1,14 @@
 from rest_framework import status
+from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 from rest_framework.mixins import ListModelMixin, RetrieveModelMixin, CreateModelMixin, UpdateModelMixin
 from .serializer import *
+from .Filter import *
 
 
 class BookMainPage(ListModelMixin, RetrieveModelMixin, GenericViewSet):
-    queryset = Book.objects.select_related('owner').all()
+    queryset = Book.objects.select_related('owner').all()[0:1]
 
     def get_serializer_context(self):
         return {'user': self.request.user, 'book_id': self.kwargs.get('pk'), 'request': self.request}
@@ -109,3 +111,14 @@ class CommentBook(ListModelMixin, CreateModelMixin, GenericViewSet, UpdateModelM
         if queryset is None:
             return Response(status=status.HTTP_404_NOT_FOUND)
         return Response(serializer.data)
+
+
+class BookSearch(ListAPIView):
+    serializer_class = BookSearchSerializer
+    filterset_class = BookFilter
+
+    def get_queryset(self):
+        query_params = self.request.query_params
+        if query_params is not None:
+            return Book.objects.all()
+        return None

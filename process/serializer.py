@@ -130,6 +130,8 @@ class RequestSerializer(serializers.ModelSerializer):
             elif validated_data.get('is_accepted') is False:
                 instance.is_accepted = False
                 instance.is_read = True
+                instance.book.count += 1
+                instance.book.save()
                 instance.save()
                 Notification.objects.create(user=instance.user, metadata={"book": instance.book.id}, type='EX',
                                             title='تمدید کتاب',
