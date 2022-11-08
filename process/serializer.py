@@ -6,6 +6,7 @@ from rest_framework import serializers
 from rest_framework.response import Response
 
 from books.models import Book, Comment, Rate, BookCategory
+from books.serializer import CategorySimpleSerializer
 from process.models import Request, History, Notification, AvailableNotification
 from process.signals import available_book
 from process.tasks import make_new_book_notification
@@ -181,7 +182,32 @@ class BookSerializer(serializers.ModelSerializer):
     class Meta:
         model = Book
         fields = ['id', 'name', 'owner', 'publisher', 'publish_date', 'volume_num', 'page_count', 'author',
-                  'translator', 'description', 'category', 'picture', 'count']
+                  'translator', 'description', 'category', 'Category', 'picture', 'count']
+        extra_kwargs = {
+            'Category': {'read_only': True},
+            'category': {'write_only': True},
+        }
+
+    Category = serializers.SerializerMethodField(method_name='get_category')
+
+    def get_category(self, obj: Book):
+        cat_holder = []
+        for cat in obj.category.all():
+            cat_holder.append(cat)
+        complete_categories = [[], [], [], [], [], []]
+        for i in range(0, len(cat_holder)):
+            if cat_holder[i].parent is not None:
+                complete_categories[i].append(cat_holder[i])
+                while cat_holder[i].parent is not None:
+                    complete_categories[i].append(cat_holder[i].parent)
+                    cat_holder[i] = cat_holder[i].parent
+            else:
+                complete_categories[i].append(cat_holder[i])
+        final = []
+        for i in complete_categories:
+            if i != []:
+                final.append(CategorySimpleSerializer(i, many=True).data)
+        return final
 
     def validate(self, data):
         persian_letters = re.compile(r'[\u0600-\u06FF]+')

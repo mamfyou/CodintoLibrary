@@ -44,7 +44,7 @@ class BookViewset(GenericViewSet, ListModelMixin, CreateModelMixin, UpdateModelM
     lookup_field = 'pk'
 
     def get_queryset(self):
-        return Book.objects.all()
+        return Book.objects.prefetch_related('category').all().order_by('-created_at')
 
     def get_serializer_class(self):
         if self.request.method == 'GET' and self.kwargs.get('pk') is None:
@@ -71,7 +71,7 @@ class Category(ListCreateAPIView):
 
 class NotificationViewSet(GenericViewSet, ListModelMixin, CreateModelMixin, RetrieveModelMixin, DestroyModelMixin):
     def get_queryset(self):
-        return Notification.objects.filter(type='GN')
+        return Notification.objects.filter(type='GN', user=self.request.user).order_by('-created_at')
 
     serializer_class = NotificationSerializer
     permission_classes = [IsSuperUser]
