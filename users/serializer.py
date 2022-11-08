@@ -142,13 +142,17 @@ class PanelNotificationSerializer(serializers.ModelSerializer):
 class PanelBookshelfSerializer(serializers.ModelSerializer):
     class Meta:
         model = Bookshelf
-        fields = ['id', 'name', 'book', 'user']
-        read_only_fields = ['user']
+        fields = ['id', 'name', 'Book', 'book']
+        extra_kwargs = {
+            'book': {'write_only': True},
+        }
+
+    Book = serializers.SerializerMethodField(method_name='get_book')
+
+    def get_book(self, obj):
+        return BookSimpleSerializer(obj.book, many=True, context=self.context).data
 
     def create(self, validated_data):
         bookshelf = Bookshelf.objects.create(name=validated_data.get('name'), user=self.context['user'])
         bookshelf.book.set(validated_data.get('book'))
         return bookshelf
-
-
-

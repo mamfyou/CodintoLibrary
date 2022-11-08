@@ -1,13 +1,8 @@
-from django.db.models import Q
 from rest_framework import status
-from rest_framework.mixins import ListModelMixin, UpdateModelMixin, CreateModelMixin, DestroyModelMixin, \
-    RetrieveModelMixin
+from rest_framework.mixins import ListModelMixin, UpdateModelMixin, DestroyModelMixin
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet, ModelViewSet
-
-from process.models import Request
-from .models import Bookshelf
 from .Filter import *
 from .serializer import *
 from rest_framework.generics import RetrieveAPIView, RetrieveUpdateAPIView, ListAPIView, CreateAPIView
@@ -47,7 +42,7 @@ class PanelCommentViewSet(ListModelMixin, GenericViewSet, DestroyModelMixin, Upd
     lookup_field = 'pk'
 
     def get_queryset(self):
-        return Comment.objects.filter(user=self.request.user)
+        return Comment.objects.filter(user=self.request.user).select_related('book')
 
     serializer_class = CommentPanelSerializer
     filterset_class = CommentPanelFilter
@@ -87,20 +82,10 @@ class PanelBookshelfViewSet(ModelViewSet):
     lookup_field = 'pk'
 
     def get_queryset(self):
-        return Bookshelf.objects.filter(user=self.request.user)
+        return Bookshelf.objects.filter(user=self.request.user).prefetch_related('book')
 
     serializer_class = PanelBookshelfSerializer
 
     def get_serializer_context(self):
         return {'user': self.request.user, 'request': self.request}
 
-
-class BlacklistRefreshView(APIView, BlacklistMixin):
-    def post(self, request):
-        try:
-            refresh_token = request.data['token']
-            token = RefreshToken(refresh_token)
-            token.blacklist()
-            return Response(status=status.HTTP_205_RESET_CONTENT)
-        except Exception as e:
-            return Response(status=status.HTTP_400_BAD_REQUEST)

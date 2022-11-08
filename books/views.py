@@ -1,6 +1,5 @@
 from rest_framework import status
 from rest_framework.generics import ListAPIView, CreateAPIView
-from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 from rest_framework.mixins import ListModelMixin, RetrieveModelMixin, CreateModelMixin, UpdateModelMixin
 from .serializer import *
@@ -11,7 +10,7 @@ class BookMainPage(ListModelMixin, RetrieveModelMixin, GenericViewSet):
     def get_queryset(self):
         if self.kwargs.get('pk') is None:
             return Book.objects.select_related('owner').all()[0:1]
-        return Book.objects.all()
+        return Book.objects.select_related('owner').all()
 
     def get_serializer_context(self):
         return {'user': self.request.user, 'book_id': self.kwargs.get('pk'), 'request': self.request}

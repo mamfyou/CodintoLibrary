@@ -22,7 +22,7 @@ class BookUser(AbstractUser):
 
 class Bookshelf(models.Model):
     name = models.CharField(max_length=255)
-    user = models.ForeignKey(BookUser, on_delete=models.CASCADE, related_name='bookshelf')
+    user = models.ForeignKey(BookUser, on_delete=models.CASCADE, related_name='userBookshelf')
     book = models.ManyToManyField("books.Book", related_name='bookBookshelf')
     created_at = models.DateTimeField(auto_now_add=True)
 
