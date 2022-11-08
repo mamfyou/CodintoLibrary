@@ -1,5 +1,5 @@
 from rest_framework import status
-from rest_framework.generics import ListAPIView
+from rest_framework.generics import ListAPIView, CreateAPIView
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 from rest_framework.mixins import ListModelMixin, RetrieveModelMixin, CreateModelMixin, UpdateModelMixin
@@ -8,7 +8,10 @@ from .Filter import *
 
 
 class BookMainPage(ListModelMixin, RetrieveModelMixin, GenericViewSet):
-    queryset = Book.objects.select_related('owner').all()[0:1]
+    def get_queryset(self):
+        if self.kwargs.get('pk') is None:
+            return Book.objects.select_related('owner').all()[0:1]
+        return Book.objects.all()
 
     def get_serializer_context(self):
         return {'user': self.request.user, 'book_id': self.kwargs.get('pk'), 'request': self.request}
@@ -118,7 +121,23 @@ class BookSearch(ListAPIView):
     filterset_class = BookFilter
 
     def get_queryset(self):
-        query_params = self.request.query_params
-        if query_params is not None:
+        if self.request.query_params is not None:
             return Book.objects.all()
         return None
+
+
+class AvailableNotif(CreateAPIView):
+    serializer_class = AvailableNotifSerializer
+    queryset = Book.objects.all()
+
+    def get_serializer_context(self):
+        return {'user': self.request.user, 'request': self.request, 'book_id': self.kwargs.get('pk')}
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        if AvailableNotification.objects.filter(user=request.user, book=self.kwargs.get('pk')).exists():
+            return Response({'message': 'اعلان تنظیم شد!'}, status=status.HTTP_201_CREATED, headers=headers)
+        return Response({'message': 'اعلان حذف شد!'}, status=status.HTTP_204_NO_CONTENT, headers=headers)

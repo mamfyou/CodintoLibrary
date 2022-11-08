@@ -1,15 +1,18 @@
+from django.db.models import Q
 from rest_framework import status
 from rest_framework.mixins import ListModelMixin, UpdateModelMixin, CreateModelMixin, DestroyModelMixin, \
     RetrieveModelMixin
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet, ModelViewSet
 
 from process.models import Request
 from .models import Bookshelf
 from .Filter import *
 from .serializer import *
-from rest_framework.generics import RetrieveAPIView, RetrieveUpdateAPIView, ListAPIView
+from rest_framework.generics import RetrieveAPIView, RetrieveUpdateAPIView, ListAPIView, CreateAPIView
 from books.models import Book
+from rest_framework_simplejwt.tokens import RefreshToken, BlacklistMixin
 
 
 # Create your views here.
@@ -56,6 +59,7 @@ class PanelCommentViewSet(ListModelMixin, GenericViewSet, DestroyModelMixin, Upd
         instance = self.get_object()
         self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT, data={'message': 'comment deleted'})
+
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
@@ -71,10 +75,9 @@ class PanelCommentViewSet(ListModelMixin, GenericViewSet, DestroyModelMixin, Upd
         return Response(data={'message': 'درخواست شما با موفقیت ثبت شد! برای پاسخ ادمین منتظر باشید 😍'})
 
 
-
 class PanelNotificationViewSet(GenericViewSet, ListModelMixin, UpdateModelMixin):
     def get_queryset(self):
-        return Notification.objects.filter(user=self.request.user)
+        return Notification.objects.filter(user=self.request.user).order_by('-created')
 
     serializer_class = PanelNotificationSerializer
     filterset_class = NotificationPanel
@@ -91,3 +94,13 @@ class PanelBookshelfViewSet(ModelViewSet):
     def get_serializer_context(self):
         return {'user': self.request.user, 'request': self.request}
 
+
+class BlacklistRefreshView(APIView, BlacklistMixin):
+    def post(self, request):
+        try:
+            refresh_token = request.data['token']
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+            return Response(status=status.HTTP_205_RESET_CONTENT)
+        except Exception as e:
+            return Response(status=status.HTTP_400_BAD_REQUEST)

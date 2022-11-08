@@ -1,0 +1,1 @@
+from .Celery import celery_obj

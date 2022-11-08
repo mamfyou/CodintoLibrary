@@ -5,7 +5,7 @@ from rest_framework_nested.routers import DefaultRouter, NestedDefaultRouter
 router = DefaultRouter()
 router.register('adminpanel/requests', RequestViewset, basename='requests')
 router.register('adminpanel/books', BookViewset, basename='books')
-router.register('adminpanel/notifications', BookViewset, basename='notifications')
+router.register('adminpanel/notifications', NotificationViewSet, basename='notifications')
 
 urlpatterns = [
     path('', include(router.urls)),

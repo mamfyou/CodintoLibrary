@@ -5,6 +5,7 @@ from django.db.models import F, Avg
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+from rest_framework.response import Response
 
 from books.models import Book, BookCategory, Comment, Rate, LikeHistory, DislikeHistory
 from process.models import AvailableNotification, History, Request
@@ -367,3 +368,14 @@ class BookSearchSerializer(serializers.ModelSerializer):
     class Meta:
         model = Book
         fields = ['id', 'name', 'author', 'owner', 'publisher']
+
+
+class AvailableNotifSerializer(serializers.Serializer):
+    def create(self, validated_data):
+        print(self.context.get('book_id'))
+        book = Book.objects.get(id=self.context.get('book_id'))
+        if AvailableNotification.objects.filter(user=self.context['user'], book=book).exists():
+            AvailableNotification.objects.get(user=self.context['user'], book=book).delete()
+            return Response({'message': 'اعلان آماده شدن کتاب غیرفعال شد!'})
+        AvailableNotification.objects.create(user=self.context['user'], book=book)
+        return Response({'message': 'اعلان آماده شدن کتاب فعال شد!'})

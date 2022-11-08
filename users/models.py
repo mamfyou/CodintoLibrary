@@ -1,5 +1,9 @@
+from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+
+
 # from books.models import Book
 
 
@@ -21,4 +25,6 @@ class Bookshelf(models.Model):
     user = models.ForeignKey(BookUser, on_delete=models.CASCADE, related_name='bookshelf')
     book = models.ManyToManyField("books.Book", related_name='bookBookshelf')
     created_at = models.DateTimeField(auto_now_add=True)
+
+
 

@@ -1,6 +1,7 @@
 import re
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from books.models import Book, Comment
 from .models import Bookshelf
@@ -85,6 +86,7 @@ class CommentPanelSerializer(serializers.ModelSerializer):
         Request.objects.create(type='CM', metadata={'comment': validated_data.get('text')}, user=instance.user,
                                book=instance.book)
         return validated_data
+
     def validate(self, data):
         farsi_pattern = re.compile(r'[\u0600-\u06FF]+')
         eng = re.compile(r'[A-Za-z]')
@@ -92,8 +94,10 @@ class CommentPanelSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('کامنت نمیتواند خالی باشد')
         elif re.search('[A-Za-z]', data.get('text')):
             raise serializers.ValidationError('کامنت باید به زبان فارسی باشد')
-        elif Request.objects.filter(type='CM', user=self.instance.user, book=self.instance.book, is_accepted__isnull=True):
+        elif Request.objects.filter(type='CM', user=self.instance.user, book=self.instance.book,
+                                    is_accepted__isnull=True):
             raise serializers.ValidationError('شما یک درخواست در انتظار پاسخ دارید')
+
 
 class PanelCommentsSerializer(serializers.ModelSerializer):
     class Meta:
@@ -145,3 +149,6 @@ class PanelBookshelfSerializer(serializers.ModelSerializer):
         bookshelf = Bookshelf.objects.create(name=validated_data.get('name'), user=self.context['user'])
         bookshelf.book.set(validated_data.get('book'))
         return bookshelf
+
+
+

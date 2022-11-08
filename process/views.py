@@ -1,11 +1,10 @@
-from django.contrib.auth import get_user_model
-from django.shortcuts import render
-from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import status
 from rest_framework.generics import CreateAPIView, ListCreateAPIView
-from rest_framework.mixins import UpdateModelMixin, ListModelMixin, RetrieveModelMixin, CreateModelMixin
+from rest_framework.mixins import UpdateModelMixin, ListModelMixin, RetrieveModelMixin, CreateModelMixin, \
+    DestroyModelMixin
 from rest_framework.viewsets import GenericViewSet
 from .Filter import *
-
+from .permissoins import *
 from .serializer import *
 
 
@@ -13,6 +12,7 @@ from .serializer import *
 class CreateUser(CreateAPIView):
     queryset = get_user_model().objects.all()
     serializer_class = CreateUserSerializer
+    permission_classes = [IsSuperUser]
 
 
 class RequestViewset(GenericViewSet, ListModelMixin, UpdateModelMixin):
@@ -23,6 +23,7 @@ class RequestViewset(GenericViewSet, ListModelMixin, UpdateModelMixin):
 
     serializer_class = RequestSerializer
     filterset_class = RequestFilter
+    permission_classes = [IsSuperUser]
 
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
@@ -49,18 +50,28 @@ class BookViewset(GenericViewSet, ListModelMixin, CreateModelMixin, UpdateModelM
         if self.request.method == 'GET' and self.kwargs.get('pk') is None:
             return BookListSerializer
         return BookSerializer
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        make_new_book_notification(book_id=serializer.data.get('id'))
+        return Response({'message': 'با موفقیت اضافه شد!'}, status=status.HTTP_201_CREATED, headers=headers)
 
     search_fields = ['name']
     filterset_fields = ['category']
+    permission_classes = [IsSuperUser]
 
 
 class Category(ListCreateAPIView):
     serializer_class = CategorySerializer
     queryset = BookCategory.objects.all()
+    permission_classes = [IsSuperUser]
 
 
-class NotificationViewSet(GenericViewSet, ListModelMixin, CreateModelMixin):
+class NotificationViewSet(GenericViewSet, ListModelMixin, CreateModelMixin, RetrieveModelMixin, DestroyModelMixin):
     def get_queryset(self):
-        return Notification.objects.all()
+        return Notification.objects.filter(type='GN')
 
-
+    serializer_class = NotificationSerializer
+    permission_classes = [IsSuperUser]

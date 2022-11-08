@@ -6,7 +6,9 @@ from rest_framework import serializers
 from rest_framework.response import Response
 
 from books.models import Book, Comment, Rate, BookCategory
-from process.models import Request, History, Notification
+from process.models import Request, History, Notification, AvailableNotification
+from process.signals import available_book
+from process.tasks import make_new_book_notification
 
 
 class CreateUserSerializer(serializers.ModelSerializer):
@@ -87,13 +89,18 @@ class RequestSerializer(serializers.ModelSerializer):
         return data
 
     def update(self, instance: Request, validated_data):
+        if validated_data.get('is_accepted') is True:
+            instance.is_read = True
+            instance.is_accepted = True
+            instance.save()
+        elif validated_data.get('is_accepted') is False:
+            instance.is_read = True
+            instance.is_accepted = False
+            instance.save()
         if instance.type == 'BR':
             history = History.objects.filter(user=instance.user, book=instance.book, is_active=True,
                                              is_accepted=False).first()
             if validated_data.get('is_accepted') is True and history.book.count >= 1:
-                instance.is_accepted = True
-                instance.is_read = True
-                instance.save()
                 book = history.book
                 history.end_date = datetime.now() + timedelta(days=instance.metadata.get('end_date'))
                 history.start_date = datetime.now()
@@ -108,9 +115,6 @@ class RequestSerializer(serializers.ModelSerializer):
                                             description=f'تایید شد😍' + f'{instance.book.name}' + f'درخواست شما برای امانت کتاب ')
 
             elif validated_data.get('is_accepted') is False or history.book.count == 0:
-                instance.is_accepted = False
-                instance.is_read = True
-                instance.save()
                 history.delete()
                 Notification.objects.create(user=instance.user, metadata={"book": instance.book.id}, type='BR',
                                             title='امانت کتاب',
@@ -118,9 +122,6 @@ class RequestSerializer(serializers.ModelSerializer):
         elif instance.type == 'EX':
             history = History.objects.get(user=instance.user, book=instance.book, is_active=True, is_accepted=True)
             if validated_data.get('is_accepted') is True:
-                instance.is_accepted = True
-                instance.is_read = True
-                instance.save()
                 history.end_date += timedelta(days=instance.metadata.get('extend_time'))
                 history.is_extended = True
                 history.save()
@@ -128,11 +129,6 @@ class RequestSerializer(serializers.ModelSerializer):
                                             title='تمدید کتاب',
                                             description=f'تایید شد😍' + f'{instance.book.name}' + f'درخواست شما برای تمدید کتاب ')
             elif validated_data.get('is_accepted') is False:
-                instance.is_accepted = False
-                instance.is_read = True
-                instance.book.count += 1
-                instance.book.save()
-                instance.save()
                 Notification.objects.create(user=instance.user, metadata={"book": instance.book.id}, type='EX',
                                             title='تمدید کتاب',
                                             description=f'تایید نشد😢' + f'{instance.book.name}' + f'متاسفانه درخواست شما برای تمدید کتاب ')
@@ -141,20 +137,18 @@ class RequestSerializer(serializers.ModelSerializer):
             history = History.objects.filter(user=instance.user, book=instance.book, is_active=True,
                                              is_accepted=True).first()
             if validated_data.get('is_accepted') is True:
-                instance.is_accepted = True
-                instance.is_read = True
-                instance.save()
+                instance.book.count += 1
+                instance.book.save()
                 history.is_active = False
                 history.save()
+                if instance.book.count == 1:
+                    available_book.send_robust(sender=self.__class__, book_id=instance.book.id)
                 Notification.objects.create(user=instance.user, metadata={"book": instance.book.id}, type='RT',
                                             title='بازگشت کتاب',
                                             description=f'تایید شد😍 امیدواریم تجربه خوبی در کتابخانه کدینتو کسب کرده باشید😊' + f'{instance.book.name}' + f'درخواست شما برای تحویل کتاب ')
 
         elif instance.type == 'CM':
             if validated_data.get('is_accepted') is True:
-                instance.is_accepted = True
-                instance.is_read = True
-                instance.save()
                 if Comment.objects.filter(user=instance.user, book=instance.book).exists():
                     comment = Comment.objects.get(user=instance.user, book=instance.book)
                     comment.text = instance.metadata.get('comment')
@@ -170,15 +164,14 @@ class RequestSerializer(serializers.ModelSerializer):
                     comment.save()
                     if instance.metadata.get('rate') is not None:
                         rate = Rate.objects.create(user=instance.user, book=instance.book)
-                        rate.save()
+                        self.save = rate.save()
                 Notification.objects.create(user=instance.user,
+                                            title='ثبت نظر',
                                             metadata={"book": instance.book.id}, type='CM',
                                             description=f'{comment.text}' + f'کامنت:' + f'ثبت شد' + f'{instance.book.name}' + f'نظر شما برای کتاب ')
             elif validated_data.get('is_accepted') is False:
-                instance.is_accepted = False
-                instance.is_read = True
-                instance.save()
                 Notification.objects.create(user=instance.user,
+                                            title='ثبت نظر',
                                             metadata={"book": instance.book.id}, type='CM',
                                             description=f'{instance.metadata.get("text")}' + f'کامنت:' + f'تایید نشد' + f'{instance.book.name}' + f'نظر شما برای کتاب')
         return validated_data.get('is_accepted')
@@ -187,8 +180,8 @@ class RequestSerializer(serializers.ModelSerializer):
 class BookSerializer(serializers.ModelSerializer):
     class Meta:
         model = Book
-        fields = ['id', 'owner', 'publisher', 'publish_date', 'volume_num', 'page_count', 'author', 'translator',
-                  'description', 'category', 'picture', 'count']
+        fields = ['id', 'name', 'owner', 'publisher', 'publish_date', 'volume_num', 'page_count', 'author',
+                  'translator', 'description', 'category', 'picture', 'count']
 
     def validate(self, data):
         persian_letters = re.compile(r'[\u0600-\u06FF]+')
@@ -200,6 +193,7 @@ class BookSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('سایز عکس نباید بیشتر از ۵ مگابایت باشد!')
         elif data.get('count') == 0:
             raise serializers.ValidationError('تعداد کتاب حداقل ۱ عدد می باشد!')
+        return data
 
 
 class BookListSerializer(serializers.ModelSerializer):
@@ -212,3 +206,16 @@ class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = BookCategory
         fields = ['id', 'name', 'parent']
+
+
+class NotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notification
+        fields = ['id', 'type', 'title', 'description', 'book']
+
+    book = serializers.SerializerMethodField(method_name='get_book')
+
+    def get_book(self, obj):
+        if obj.metadata is not None:
+            return Book.objects.get(id=obj.metadata.get('book')).name
+        return None
