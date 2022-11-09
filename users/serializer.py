@@ -97,6 +97,7 @@ class CommentPanelSerializer(serializers.ModelSerializer):
         elif Request.objects.filter(type='CM', user=self.instance.user, book=self.instance.book,
                                     is_accepted__isnull=True):
             raise serializers.ValidationError('شما یک درخواست در انتظار پاسخ دارید')
+        return data
 
 
 class PanelCommentsSerializer(serializers.ModelSerializer):
