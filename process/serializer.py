@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from books.models import Book, Comment, Rate, BookCategory
 from books.serializer import CategorySimpleSerializer
 from process.models import Request, History, Notification, AvailableNotification
-from process.signals import available_book
+from process.signals import available_book, new_general_notif
 from process.tasks import make_new_book_notification
 
 
@@ -17,6 +17,9 @@ class CreateUserSerializer(serializers.ModelSerializer):
         model = get_user_model()
         fields = ['id', 'first_name', 'last_name', 'username', 'password', 'confirm_password', 'phone_number', 'email',
                   'telegram_id']
+        extra_kwargs = {
+            'password': {'write_only': True}
+        }
 
     confirm_password = serializers.CharField(max_length=128, write_only=True)
 
@@ -237,11 +240,14 @@ class CategorySerializer(serializers.ModelSerializer):
 class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification
-        fields = ['id', 'type', 'title', 'description', 'book']
+        fields = ['id', 'title', 'description', 'book', 'metadata']
 
     book = serializers.SerializerMethodField(method_name='get_book')
 
     def get_book(self, obj):
-        if obj.metadata is not None:
+        if obj.get('metadata') is not None:
             return Book.objects.get(id=obj.metadata.get('book')).name
         return None
+    def create(self, validated_data):
+        new_general_notif.send_robust(sender=self.__class__, kwargs=validated_data)
+        return validated_data

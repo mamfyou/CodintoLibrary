@@ -2,14 +2,14 @@ from rest_framework import status
 from rest_framework.generics import CreateAPIView, ListCreateAPIView
 from rest_framework.mixins import UpdateModelMixin, ListModelMixin, RetrieveModelMixin, CreateModelMixin, \
     DestroyModelMixin
-from rest_framework.viewsets import GenericViewSet
+from rest_framework.viewsets import GenericViewSet, ModelViewSet
 from .Filter import *
 from .permissoins import *
 from .serializer import *
 
 
 # Create your views here.
-class CreateUser(CreateAPIView):
+class UserViewSet(ModelViewSet):
     queryset = get_user_model().objects.all()
     serializer_class = CreateUserSerializer
     permission_classes = [IsSuperUser]
@@ -40,7 +40,7 @@ class RequestViewset(GenericViewSet, ListModelMixin, UpdateModelMixin):
         return Response(data={'message': 'Successful'})
 
 
-class BookViewset(GenericViewSet, ListModelMixin, CreateModelMixin, UpdateModelMixin, RetrieveModelMixin):
+class BookViewset(ModelViewSet):
     lookup_field = 'pk'
 
     def get_queryset(self):
@@ -50,6 +50,7 @@ class BookViewset(GenericViewSet, ListModelMixin, CreateModelMixin, UpdateModelM
         if self.request.method == 'GET' and self.kwargs.get('pk') is None:
             return BookListSerializer
         return BookSerializer
+
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -71,7 +72,7 @@ class Category(ListCreateAPIView):
 
 class NotificationViewSet(GenericViewSet, ListModelMixin, CreateModelMixin, RetrieveModelMixin, DestroyModelMixin):
     def get_queryset(self):
-        return Notification.objects.filter(type='GN', user=self.request.user).order_by('-created_at')
+        return Notification.objects.filter(type='GN', user=self.request.user).order_by('-created')
 
     serializer_class = NotificationSerializer
     permission_classes = [IsSuperUser]

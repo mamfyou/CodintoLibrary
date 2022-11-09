@@ -20,6 +20,11 @@ class BookMainPage(ListModelMixin, RetrieveModelMixin, GenericViewSet):
             return MainPageSerializer
         return BookComplexSerializer
 
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
+
 
 class BorrowBook(ListModelMixin, CreateModelMixin, GenericViewSet):
     def get_queryset(self):
@@ -115,9 +120,14 @@ class CommentBook(ListModelMixin, CreateModelMixin, GenericViewSet, UpdateModelM
 class BookSearch(ListAPIView):
     serializer_class = BookSearchSerializer
     filterset_class = BookFilter
-    search_fields = ['@name']
+    search_fields = ['name']
 
-    def validation(self):
+    def get_queryset(self):
+        if self.request.query_params is not None:
+            return Book.objects.all()
+        return None
+
+    def list(self, request, *args, **kwargs):
         if ((self.request.query_params.get('new') == 'true')
             and (self.request.query_params.get('most_popular') == 'true' or self.request.query_params.get(
                     'most_wanted') == 'true')) or \
@@ -127,13 +137,18 @@ class BookSearch(ListAPIView):
                 ((self.request.query_params.get('most_popular') == 'true')
                  and (self.request.query_params.get('most_wanted') == 'true' or self.request.query_params.get(
                             'new') == 'true')):
-            raise ValidationError('نمیتوانید همزمان بیش از یک پارامتر را انتخاب کنید')
+            return Response(data={'message': 'نمیتوانید همزمان بیش از یک پارامتر را برای مرتب سازی انتخاب کنید'},
+                            status=status.HTTP_400_BAD_REQUEST)
 
-    def get_queryset(self):
-        if self.request.query_params is not None:
-            self.validation()
-            return Book.objects.all()
-        return None
+        queryset = self.filter_queryset(self.get_queryset())
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
 
 class AvailableNotif(CreateAPIView):

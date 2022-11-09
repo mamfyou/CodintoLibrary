@@ -1,13 +1,11 @@
 from rest_framework import status
+from rest_framework.generics import RetrieveUpdateAPIView, ListAPIView
 from rest_framework.mixins import ListModelMixin, UpdateModelMixin, DestroyModelMixin
 from rest_framework.response import Response
-from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet, ModelViewSet
+
 from .Filter import *
 from .serializer import *
-from rest_framework.generics import RetrieveAPIView, RetrieveUpdateAPIView, ListAPIView, CreateAPIView
-from books.models import Book
-from rest_framework_simplejwt.tokens import RefreshToken, BlacklistMixin
 
 
 # Create your views here.
@@ -88,4 +86,3 @@ class PanelBookshelfViewSet(ModelViewSet):
 
     def get_serializer_context(self):
         return {'user': self.request.user, 'request': self.request}
-

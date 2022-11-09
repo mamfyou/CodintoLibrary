@@ -212,7 +212,7 @@ class BookExtendSerializer(serializers.ModelSerializer):
             raise ValidationError('شما یک بار این کتاب را تمدید کرده اید!')
         elif has_request.filter(type='EX').exists():
             raise ValidationError('شما یک بار برای این کتاب ثبت درخواست کرده اید! لطفا تا پاسخگویی ادمین صبور باشید 🙏')
-        elif has_request.exists():
+        elif has_request.filter(type__in=['RT', 'EX', 'BR']).exists():
             raise ValidationError('شما یک درخواست دیگر برای این کتاب دارید! لطفا تا پاسخگویی ادمین صبور باشید 🙏')
         return data
 
@@ -270,7 +270,7 @@ class BookReturnSerializer(serializers.ModelSerializer):
             raise ValidationError('شما هنوز این کتاب را به امانت نبرده اید!')
         elif has_request.filter(type='RT').exists():
             raise ValidationError('شما یک بار برای این کتاب ثبت درخواست کرده اید! لطفا تا پاسخگویی ادمین صبور باشید 🙏')
-        elif has_request.exists():
+        elif has_request.filter(type__in=['RT', 'EX', 'BR']).exists():
             raise ValidationError('شما یک درخواست دیگر برای این کتاب دارید! لطفا تا پاسخگویی ادمین صبور باشید 🙏')
         return data
 

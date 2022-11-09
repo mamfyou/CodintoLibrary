@@ -18,7 +18,6 @@ from celery.schedules import crontab
 from decouple import config
 
 import process.permissoins
-import users.permissions
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -50,6 +49,7 @@ INSTALLED_APPS = [
     'djoser',
     'jwt',
     'debug_toolbar',
+    'drf_yasg',
 
     'users',
     'books',
@@ -164,8 +164,8 @@ REST_FRAMEWORK = {
         'rest_framework.throttling.UserRateThrottle'
     ),
     'DEFAULT_THROTTLE_RATES': {
-        'anon': '5/minute',
-        'user': '30/minute',
+        'anon': '10/minute',
+        'user': '40/minute',
     }
 }
 SIMPLE_JWT = {
