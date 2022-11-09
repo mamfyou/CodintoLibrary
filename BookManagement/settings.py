@@ -13,6 +13,7 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+import redis
 import rest_framework.permissions
 from celery.schedules import crontab
 from decouple import config
@@ -32,6 +33,8 @@ SECRET_KEY = config('SECRET_KEY')
 DEBUG = True
 
 ALLOWED_HOSTS = []
+
+r_server = redis.Redis(host="127.0.0.1", port=6379)
 
 # Application definition
 INSTALLED_APPS = [
@@ -174,7 +177,7 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=365),
 }
 
-CELERY_BROKER_URL = 'redis://localhost:6379/1'
+CELERY_BROKER_URL = 'redis://127.0.0.1:6379/1'
 CELERY_BEAT_SCHEDULE = {
     'erase_notifications': {
         'task': 'process.tasks.erase_notifications',

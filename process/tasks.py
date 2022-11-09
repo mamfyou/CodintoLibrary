@@ -43,7 +43,8 @@ def time_warning_notification():
                                         metadata={"book": i.book.id},
                                         description=f'فرصت باقی است😥' + f'{days_left}' + f'تنها' + f'{i.book.name}' + f'برای تحویل کتاب')
 
+
 @shared_task
-def make_new_general_notifiction_for_every_one(title, description):
-    for i in get_user_model():
-        Notification.objects.create(title=title, description=description, type='GN', user=i)
+def make_new_general_notification_for_every_one(title, description, metadata):
+    for i in get_user_model().objects.all():
+        Notification.objects.create(title=title, description=description, type='GN', user=i, metadata=metadata)

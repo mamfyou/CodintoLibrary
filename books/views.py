@@ -120,7 +120,7 @@ class CommentBook(ListModelMixin, CreateModelMixin, GenericViewSet, UpdateModelM
 class BookSearch(ListAPIView):
     serializer_class = BookSearchSerializer
     filterset_class = BookFilter
-    search_fields = ['name']
+    search_fields = ['name', 'author']
 
     def get_queryset(self):
         if self.request.query_params is not None:

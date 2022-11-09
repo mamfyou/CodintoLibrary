@@ -245,9 +245,13 @@ class NotificationSerializer(serializers.ModelSerializer):
     book = serializers.SerializerMethodField(method_name='get_book')
 
     def get_book(self, obj):
-        if obj.get('metadata') is not None:
+        try:
             return Book.objects.get(id=obj.metadata.get('book')).name
-        return None
+        except:
+            return None
+
     def create(self, validated_data):
-        new_general_notif.send_robust(sender=self.__class__, kwargs=validated_data)
+        new_general_notif.send_robust(sender=self.__class__, title=validated_data.get('title'),
+                                      description=validated_data.get('description'),
+                                      metadata=validated_data.get('metadata', None))
         return validated_data
