@@ -82,10 +82,7 @@ class BookComplexSerializer(serializers.ModelSerializer):
         return AvailableNotification.objects.filter(user=self.context['user'], book=obj).exists()
 
     def get_has_borrowed(self, obj: Book):
-        return History.objects.filter(user=self.context['user'],
-                                      book=obj,
-                                      is_active=True,
-                                      is_accepted=True).exists()
+        return self.context.get('history_exists')
 
     def get_has_sent_request(self, obj: Book):
         return Request.objects.filter(user=self.context['user'],
@@ -96,19 +93,12 @@ class BookComplexSerializer(serializers.ModelSerializer):
         return obj.count > 0
 
     def get_deadline(self, obj: Book):
-        history = History.objects.filter(book=obj,
-                                         user=self.context['user'],
-                                         is_active=True,
-                                         is_accepted=True)
-        if history.exists():
-            return (history.first().end_date - date.today()).days
+        if self.context.get('history_exists'):
+            return (self.context.get('history').first().end_date - date.today()).days
         return None
 
     def get_has_commented(self, obj: Book):
-        return History.objects.filter(user=self.context['user'],
-                                      book=obj,
-                                      is_active=False,
-                                      is_accepted=True).exists()
+        return self.context.get('history_commented')
 
     category = serializers.SerializerMethodField(method_name='get_category')
     bookComment = CommentSerializer(many=True)
