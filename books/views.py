@@ -23,10 +23,7 @@ class BookMainPage(ListModelMixin, RetrieveModelMixin, GenericViewSet):
 
 class BorrowBook(ListModelMixin, CreateModelMixin, GenericViewSet):
     def get_queryset(self):
-        queryset = Book.objects.filter(id=self.kwargs['book_pk'])
-        if queryset.exists():
-            return queryset
-        return None
+        return Book.objects.filter(id=self.kwargs['book_pk'])
 
     def get_serializer_context(self):
         return {'user': self.request.user, 'book_id': self.kwargs.get('book_pk'), 'request': self.request}
@@ -118,9 +115,23 @@ class CommentBook(ListModelMixin, CreateModelMixin, GenericViewSet, UpdateModelM
 class BookSearch(ListAPIView):
     serializer_class = BookSearchSerializer
     filterset_class = BookFilter
+    search_fields = ['@name']
+
+    def validation(self):
+        if ((self.request.query_params.get('new') == 'true')
+            and (self.request.query_params.get('most_popular') == 'true' or self.request.query_params.get(
+                    'most_wanted') == 'true')) or \
+                ((self.request.query_params.get('most_wanted') == 'true')
+                 and (self.request.query_params.get('new') == 'true' or self.request.query_params.get(
+                            'most_popular') == 'true')) or \
+                ((self.request.query_params.get('most_popular') == 'true')
+                 and (self.request.query_params.get('most_wanted') == 'true' or self.request.query_params.get(
+                            'new') == 'true')):
+            raise ValidationError('نمیتوانید همزمان بیش از یک پارامتر را انتخاب کنید')
 
     def get_queryset(self):
         if self.request.query_params is not None:
+            self.validation()
             return Book.objects.all()
         return None
 

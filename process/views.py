@@ -58,7 +58,7 @@ class BookViewset(GenericViewSet, ListModelMixin, CreateModelMixin, UpdateModelM
         make_new_book_notification(book_id=serializer.data.get('id'))
         return Response({'message': 'با موفقیت اضافه شد!'}, status=status.HTTP_201_CREATED, headers=headers)
 
-    search_fields = ['name']
+    search_fields = ['@name']
     filterset_fields = ['category']
     permission_classes = [IsSuperUser]
 
