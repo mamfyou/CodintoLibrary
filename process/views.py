@@ -1,11 +1,14 @@
+from django.db.models import Max
 from rest_framework import status
 from rest_framework.generics import CreateAPIView, ListCreateAPIView
 from rest_framework.mixins import UpdateModelMixin, ListModelMixin, RetrieveModelMixin, CreateModelMixin, \
     DestroyModelMixin
+from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet, ModelViewSet
 from .Filter import *
 from .permissoins import *
 from .serializer import *
+from .tasks import make_new_book_notification
 
 
 # Create your views here.
@@ -44,7 +47,8 @@ class BookViewset(ModelViewSet):
     lookup_field = 'pk'
 
     def get_queryset(self):
-        return Book.objects.prefetch_related('category').all().order_by('-created_at')
+        max_indent = BookCategory.objects.all().aggregate(Max('indent'))['indent__max']
+        return Book.objects.prefetch_related('category' + '__parent' * max_indent).all().order_by('-created_at')
 
     def get_serializer_class(self):
         if self.request.method == 'GET' and self.kwargs.get('pk') is None:
@@ -64,7 +68,7 @@ class BookViewset(ModelViewSet):
     permission_classes = [IsSuperUser]
 
 
-class Category(ListCreateAPIView):
+class Category(ListModelMixin, CreateModelMixin, RetrieveModelMixin, UpdateModelMixin, GenericViewSet):
     serializer_class = CategorySerializer
     queryset = BookCategory.objects.all()
     permission_classes = [IsSuperUser]

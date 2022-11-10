@@ -11,4 +11,4 @@ def make_notification(sender, **kwargs):
 @receiver(new_general_notif)
 def make_general_notification(sender, **kwargs):
     make_new_general_notification_for_every_one.delay(title=kwargs['title'], description=kwargs['description'],
-                                                      metadata=kwargs['metadata'])
+                                                      book=kwargs['book'])

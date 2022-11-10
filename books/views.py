@@ -1,30 +1,27 @@
+from django.db.models import Max
 from rest_framework import status
 from rest_framework.generics import ListAPIView, CreateAPIView
-from rest_framework.viewsets import GenericViewSet
+from rest_framework.viewsets import GenericViewSet, ReadOnlyModelViewSet
 from rest_framework.mixins import ListModelMixin, RetrieveModelMixin, CreateModelMixin, UpdateModelMixin
 from .serializer import *
 from .Filter import *
 
 
-class BookMainPage(ListModelMixin, RetrieveModelMixin, GenericViewSet):
+class BookMainPage(ReadOnlyModelViewSet):
     def get_queryset(self):
         if self.kwargs.get('pk') is None:
             return Book.objects.select_related('owner').all()[0:1]
-        return Book.objects.select_related('owner').all()
+        max_indent = BookCategory.objects.all().aggregate(Max('indent'))['indent__max']
+        return Book.objects.select_related('owner'). \
+            prefetch_related('category' + '__parent' * max_indent).all()
 
     def get_serializer_context(self):
-        print(self.kwargs)
         return {'user': self.request.user,
-                'book_id': self.kwargs.get('pk'),
                 'request': self.request,
                 'history': History.objects.filter(user=self.request.user,
                                                   book_id=self.kwargs.get('pk'),
                                                   is_active=True,
                                                   is_accepted=True),
-                'history_exists': History.objects.filter(user=self.request.user,
-                                                         book_id=self.kwargs.get('pk'),
-                                                         is_active=True,
-                                                         is_accepted=True).exists(),
                 'history_commented': History.objects.filter(user=self.request.user,
                                                             book_id=self.kwargs.get('pk'),
                                                             is_active=False,
@@ -35,18 +32,15 @@ class BookMainPage(ListModelMixin, RetrieveModelMixin, GenericViewSet):
             return MainPageSerializer
         return BookComplexSerializer
 
-    def retrieve(self, request, *args, **kwargs):
-        instance = self.get_object()
-        serializer = self.get_serializer(instance)
-        return Response(serializer.data)
-
 
 class BorrowBook(ListModelMixin, CreateModelMixin, GenericViewSet):
     def get_queryset(self):
         return Book.objects.filter(id=self.kwargs['book_pk'])
 
     def get_serializer_context(self):
-        return {'user': self.request.user, 'book_id': self.kwargs.get('book_pk'), 'request': self.request}
+        return {'user': self.request.user,
+                'book_id': self.kwargs.get('book_pk'),
+                'request': self.request}
 
     serializer_class = BookBorrowSerializer
 
@@ -60,13 +54,12 @@ class BorrowBook(ListModelMixin, CreateModelMixin, GenericViewSet):
 
 class ExtendBook(ListModelMixin, CreateModelMixin, GenericViewSet):
     def get_queryset(self):
-        queryset = Book.objects.filter(id=self.kwargs['book_pk'])
-        if queryset.exists():
-            return queryset
-        return None
+        return Book.objects.filter(id=self.kwargs['book_pk'])
 
     def get_serializer_context(self):
-        return {'user': self.request.user, 'book_id': self.kwargs.get('book_pk'), 'request': self.request}
+        return {'user': self.request.user,
+                'book_id': self.kwargs.get('book_pk'),
+                'request': self.request, }
 
     serializer_class = BookExtendSerializer
 
@@ -80,10 +73,7 @@ class ExtendBook(ListModelMixin, CreateModelMixin, GenericViewSet):
 
 class ReturnBook(ListModelMixin, CreateModelMixin, GenericViewSet):
     def get_queryset(self):
-        queryset = Book.objects.filter(id=self.kwargs['book_pk'])
-        if queryset.exists():
-            return queryset
-        return None
+        return Book.objects.filter(id=self.kwargs['book_pk'])
 
     def get_serializer_context(self):
         return {'user': self.request.user, 'book_id': self.kwargs.get('book_pk'), 'request': self.request}
@@ -136,11 +126,7 @@ class BookSearch(ListAPIView):
     serializer_class = BookSearchSerializer
     filterset_class = BookFilter
     search_fields = ['name', 'author']
-
-    def get_queryset(self):
-        if self.request.query_params is not None:
-            return Book.objects.all()
-        return None
+    queryset = Book.objects.all()
 
     def list(self, request, *args, **kwargs):
         if ((self.request.query_params.get('new') == 'true')

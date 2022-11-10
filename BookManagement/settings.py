@@ -34,7 +34,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
-r_server = redis.Redis(host="127.0.0.1", port=6379)
+# r_server = redis.Redis(host="127.0.0.1", port=6379)
 
 # Application definition
 INSTALLED_APPS = [

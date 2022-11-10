@@ -4,6 +4,8 @@ import os.path
 from PIL import Image
 from io import BytesIO
 from django.core.files.base import ContentFile
+from django.db.models.signals import post_save, pre_save
+from django.dispatch import receiver
 
 
 class Book(models.Model):
@@ -69,6 +71,7 @@ class BookCategory(models.Model):
     name = models.CharField(max_length=100)
     parent = models.ForeignKey('BookCategory', on_delete=models.CASCADE, null=True, blank=True)
     description = models.TextField()
+    indent = models.PositiveIntegerField(default=0)
 
     def __str__(self):
         return self.name
@@ -102,3 +105,9 @@ class LikeHistory(models.Model):
 class DislikeHistory(models.Model):
     comment = models.ForeignKey(Comment, on_delete=models.CASCADE, related_name='commentDislike')
     user = models.ForeignKey(get_user_model(), on_delete=models.PROTECT, related_name='DislikeUser')
+
+
+@receiver(pre_save, sender=BookCategory)
+def update_indent(sender, instance, **kwargs):
+    if instance.parent is not None:
+        instance.indent = instance.parent.indent + 1

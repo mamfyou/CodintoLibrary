@@ -2,6 +2,8 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import models
 
+from books.models import Book
+
 
 class History(models.Model):
     user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='userHistory')
@@ -32,7 +34,7 @@ class Notification(models.Model):
     description = models.TextField(max_length=500)
     user = models.ForeignKey(get_user_model(), related_name='userNotification', on_delete=models.CASCADE)
     created = models.DateTimeField(auto_now_add=True)
-    metadata = models.JSONField(null=True, blank=True, default=None)
+    book = models.ForeignKey(Book, on_delete=models.PROTECT, default=1)
     is_read = models.BooleanField(default=False)
 
 

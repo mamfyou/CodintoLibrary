@@ -3,13 +3,11 @@ from datetime import datetime, timedelta, date
 
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
-from rest_framework.response import Response
 
 from books.models import Book, Comment, Rate, BookCategory
-from books.serializer import CategorySimpleSerializer
-from process.models import Request, History, Notification, AvailableNotification
+from books.serializer import CategorySimpleSerializer, CategoryMultipleParentSerializer
+from process.models import Request, History, Notification
 from process.signals import available_book, new_general_notif
-from process.tasks import make_new_book_notification
 
 
 class CreateUserSerializer(serializers.ModelSerializer):
@@ -20,7 +18,6 @@ class CreateUserSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             'password': {'write_only': True}
         }
-
     confirm_password = serializers.CharField(max_length=128, write_only=True)
 
     def create(self, validated_data):
@@ -114,13 +111,13 @@ class RequestSerializer(serializers.ModelSerializer):
                 history.book.wanted_to_read += 1
                 history.save()
                 history.book.save()
-                Notification.objects.create(user=instance.user, metadata={"book": instance.book.id}, type='BR',
+                Notification.objects.create(user=instance.user, book=instance.book, type='BR',
                                             title='امانت کتاب',
                                             description=f'تایید شد😍' + f'{instance.book.name}' + f'درخواست شما برای امانت کتاب ')
 
             elif validated_data.get('is_accepted') is False or history.book.count == 0:
                 history.delete()
-                Notification.objects.create(user=instance.user, metadata={"book": instance.book.id}, type='BR',
+                Notification.objects.create(user=instance.user, book=instance.book, type='BR',
                                             title='امانت کتاب',
                                             description=f'تایید نشد😢' + f'{instance.book.name}' + f'متاسفانه درخواست شما برای امانت کتاب ')
         elif instance.type == 'EX':
@@ -129,11 +126,11 @@ class RequestSerializer(serializers.ModelSerializer):
                 history.end_date += timedelta(days=instance.metadata.get('extend_time'))
                 history.is_extended = True
                 history.save()
-                Notification.objects.create(user=instance.user, metadata={"book": instance.book.id}, type='EX',
+                Notification.objects.create(user=instance.user, book=instance.book, type='EX',
                                             title='تمدید کتاب',
                                             description=f'تایید شد😍' + f'{instance.book.name}' + f'درخواست شما برای تمدید کتاب ')
             elif validated_data.get('is_accepted') is False:
-                Notification.objects.create(user=instance.user, metadata={"book": instance.book.id}, type='EX',
+                Notification.objects.create(user=instance.user, book=instance.book, type='EX',
                                             title='تمدید کتاب',
                                             description=f'تایید نشد😢' + f'{instance.book.name}' + f'متاسفانه درخواست شما برای تمدید کتاب ')
 
@@ -147,7 +144,7 @@ class RequestSerializer(serializers.ModelSerializer):
                 history.save()
                 if instance.book.count == 1:
                     available_book.send_robust(sender=self.__class__, book_id=instance.book.id)
-                Notification.objects.create(user=instance.user, metadata={"book": instance.book.id}, type='RT',
+                Notification.objects.create(user=instance.user, book=instance.book, type='RT',
                                             title='بازگشت کتاب',
                                             description=f'تایید شد😍 امیدواریم تجربه خوبی در کتابخانه کدینتو کسب کرده باشید😊' + f'{instance.book.name}' + f'درخواست شما برای تحویل کتاب ')
 
@@ -171,12 +168,12 @@ class RequestSerializer(serializers.ModelSerializer):
                         self.save = rate.save()
                 Notification.objects.create(user=instance.user,
                                             title='ثبت نظر',
-                                            metadata={"book": instance.book.id}, type='CM',
+                                            book=instance.book, type='CM',
                                             description=f'{comment.text}' + f'کامنت:' + f'ثبت شد' + f'{instance.book.name}' + f'نظر شما برای کتاب ')
             elif validated_data.get('is_accepted') is False:
                 Notification.objects.create(user=instance.user,
                                             title='ثبت نظر',
-                                            metadata={"book": instance.book.id}, type='CM',
+                                            book=instance.book, type='CM',
                                             description=f'{instance.metadata.get("text")}' + f'کامنت:' + f'تایید نشد' + f'{instance.book.name}' + f'نظر شما برای کتاب')
         return validated_data.get('is_accepted')
 
@@ -194,23 +191,7 @@ class BookSerializer(serializers.ModelSerializer):
     Category = serializers.SerializerMethodField(method_name='get_category')
 
     def get_category(self, obj: Book):
-        cat_holder = []
-        for cat in obj.category.all():
-            cat_holder.append(cat)
-        complete_categories = [[], [], [], [], [], []]
-        for i in range(0, len(cat_holder)):
-            if cat_holder[i].parent is not None:
-                complete_categories[i].append(cat_holder[i])
-                while cat_holder[i].parent is not None:
-                    complete_categories[i].append(cat_holder[i].parent)
-                    cat_holder[i] = cat_holder[i].parent
-            else:
-                complete_categories[i].append(cat_holder[i])
-        final = []
-        for i in complete_categories:
-            if i != []:
-                final.append(CategorySimpleSerializer(i, many=True).data)
-        return final
+        return CategoryMultipleParentSerializer(obj.category.all(), many=True).data
 
     def validate(self, data):
         persian_letters = re.compile(r'[\u0600-\u06FF]+')
@@ -234,24 +215,25 @@ class BookListSerializer(serializers.ModelSerializer):
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = BookCategory
-        fields = ['id', 'name', 'parent']
+        fields = ['id', 'name', 'parent', 'indent']
+        read_only_fields = ['indent']
 
 
 class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification
-        fields = ['id', 'title', 'description', 'book', 'metadata']
+        fields = ['id', 'title', 'description', 'book']
 
     book = serializers.SerializerMethodField(method_name='get_book')
 
     def get_book(self, obj):
         try:
-            return Book.objects.get(id=obj.metadata.get('book')).name
+            return obj.book.name
         except:
             return None
 
     def create(self, validated_data):
         new_general_notif.send_robust(sender=self.__class__, title=validated_data.get('title'),
                                       description=validated_data.get('description'),
-                                      metadata=validated_data.get('metadata', None))
+                                      book=validated_data.get('book', None))
         return validated_data

@@ -33,7 +33,7 @@ class BookSimpleSerializer(serializers.ModelSerializer):
 class CategorySimpleSerializer(serializers.ModelSerializer):
     class Meta:
         model = BookCategory
-        fields = ['id', 'name']
+        fields = ['id', 'name', 'indent']
 
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -50,6 +50,19 @@ class CommentSerializer(serializers.ModelSerializer):
     rate = serializers.SerializerMethodField(method_name='get_rate')
 
 
+class CategoryMultipleParentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BookCategory
+        fields = ['id', 'name', 'indent', 'parent']
+
+    def get_parent(self, obj):
+        if obj.parent is not None:
+            return CategoryMultipleParentSerializer(obj.parent).data
+        return None
+
+    parent = serializers.SerializerMethodField(method_name='get_parent')
+
+
 class BookComplexSerializer(serializers.ModelSerializer):
     owner = serializers.StringRelatedField()
 
@@ -60,29 +73,13 @@ class BookComplexSerializer(serializers.ModelSerializer):
                   'has_borrowed', 'deadline', 'has_sent_request', 'has_commented']
 
     def get_category(self, obj: Book):
-        cat_holder = []
-        for cat in obj.category.all():
-            cat_holder.append(cat)
-        complete_categories = [[], [], [], [], [], []]
-        for i in range(0, len(cat_holder)):
-            if cat_holder[i].parent is not None:
-                complete_categories[i].append(cat_holder[i])
-                while cat_holder[i].parent is not None:
-                    complete_categories[i].append(cat_holder[i].parent)
-                    cat_holder[i] = cat_holder[i].parent
-            else:
-                complete_categories[i].append(cat_holder[i])
-        final = []
-        for i in complete_categories:
-            if i != []:
-                final.append(CategorySimpleSerializer(i, many=True).data)
-        return final
+        return CategoryMultipleParentSerializer(obj.category.all(), many=True).data
 
     def get_has_available_notif(self, obj: Book):
         return AvailableNotification.objects.filter(user=self.context['user'], book=obj).exists()
 
     def get_has_borrowed(self, obj: Book):
-        return self.context.get('history_exists')
+        return bool(self.context.get('history'))
 
     def get_has_sent_request(self, obj: Book):
         return Request.objects.filter(user=self.context['user'],
@@ -93,7 +90,7 @@ class BookComplexSerializer(serializers.ModelSerializer):
         return obj.count > 0
 
     def get_deadline(self, obj: Book):
-        if self.context.get('history_exists'):
+        if bool(self.context.get('history')):
             return (self.context.get('history').first().end_date - date.today()).days
         return None
 
@@ -120,29 +117,27 @@ class BookBorrowSerializer(serializers.ModelSerializer):
     thumbnail = serializers.SerializerMethodField(method_name='get_thumbnail')
 
     def get_thumbnail(self, obj):
-        book = Book.objects.get(id=self.context['book_id'])
         request = self.context['request']
-        photo_url = book.thumbnail.url
+        photo_url = obj.thumbnail.url
         return request.build_absolute_uri(photo_url)
 
     def create(self, validated_data):
-        book = Book.objects.get(id=self.context['book_id'])
         History.objects.create(
             user=self.context['user'],
-            book=book,
+            book=self.context['book'],
             start_date=date.today(),
             end_date=datetime.now() + timedelta(days=validated_data['end_date']),
         )
         Request.objects.create(
             type='BR',
             user=self.context['user'],
-            book=book,
+            book=self.instance,
             metadata=validated_data
         )
         return validated_data
 
     def validate(self, data):
-        book = Book.objects.get(id=self.context['book_id'])
+        book = self.instance
         has_request = Request.objects.filter(user=self.context['user'],
                                              is_accepted__isnull=True, )
 
@@ -172,13 +167,13 @@ class BookExtendSerializer(serializers.ModelSerializer):
     thumbnail = serializers.SerializerMethodField(method_name='get_thumbnail')
 
     def get_thumbnail(self, obj: Book):
-        book = Book.objects.get(id=self.context['book_id'])
+        book = obj
         request = self.context['request']
         photo_url = book.thumbnail.url
         return request.build_absolute_uri(photo_url)
 
     def create(self, validated_data):
-        book = Book.objects.get(id=self.context['book_id'])
+        book = self.instance
         Request.objects.create(
             type='EX',
             user=self.context['user'],
@@ -188,7 +183,7 @@ class BookExtendSerializer(serializers.ModelSerializer):
         return validated_data
 
     def validate(self, data):
-        book = Book.objects.get(id=self.context['book_id'])
+        book = self.instance
         has_book = History.objects.filter(user=self.context['user'],
                                           book=book,
                                           is_active=True,

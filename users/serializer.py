@@ -67,7 +67,7 @@ class BookSimpleSerializer(serializers.ModelSerializer):
     thumbnail = serializers.SerializerMethodField(method_name='get_thumbnail')
 
     def get_thumbnail(self, obj):
-        book = Book.objects.get(id=obj.id)
+        book = obj
         request = self.context['request']
         photo_url = book.thumbnail.url
         return request.build_absolute_uri(photo_url)
@@ -122,8 +122,9 @@ class PanelNotificationSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'type', 'title', 'description', 'book_thumbnail']
 
     def get_book_thumbnail(self, obj):
-        if obj.metadata is not None:
-            book = Book.objects.get(id=obj.metadata.get('book'))
+        if obj.book is not None:
+            print(obj)
+            book = obj.book
             request = self.context['request']
             photo_url = book.thumbnail.url
             return request.build_absolute_uri(photo_url)
