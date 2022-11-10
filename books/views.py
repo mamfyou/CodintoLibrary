@@ -18,6 +18,7 @@ class BookMainPage(ReadOnlyModelViewSet):
     def get_serializer_context(self):
         return {'user': self.request.user,
                 'request': self.request,
+                'book_id' : self.kwargs.get('book_pk'),
                 'history': History.objects.filter(user=self.request.user,
                                                   book_id=self.kwargs.get('pk'),
                                                   is_active=True,

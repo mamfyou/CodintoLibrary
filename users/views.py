@@ -76,7 +76,6 @@ class PanelNotificationViewSet(GenericViewSet, ListModelMixin, UpdateModelMixin)
     filterset_class = NotificationPanel
 
 
-
 class PanelBookshelfViewSet(ModelViewSet):
     lookup_field = 'pk'
 

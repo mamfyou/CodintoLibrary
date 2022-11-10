@@ -50,7 +50,7 @@ class PanelBookSerializer(serializers.ModelSerializer):
     thumbnail = serializers.SerializerMethodField(method_name='get_thumbnail')
 
     def get_thumbnail(self, obj):
-        book = Book.objects.get(id=obj.id)
+        book = obj
         request = self.context['request']
         photo_url = book.thumbnail.url
         return request.build_absolute_uri(photo_url)
