@@ -1,8 +1,6 @@
 import re
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
-from rest_framework_simplejwt.tokens import RefreshToken
-
 from books.models import Book, Comment
 from .models import Bookshelf
 from process.models import History, Notification, Request

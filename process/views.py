@@ -1,6 +1,7 @@
 from django.db.models import Max
 from rest_framework import status
-from rest_framework.mixins import UpdateModelMixin, ListModelMixin, CreateModelMixin, DestroyModelMixin
+from rest_framework.mixins import UpdateModelMixin, ListModelMixin, RetrieveModelMixin, CreateModelMixin, \
+    DestroyModelMixin
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet, ModelViewSet, ReadOnlyModelViewSet
 from .Filter import *
@@ -72,7 +73,7 @@ class CategoryViewSet(ReadOnlyModelViewSet, CreateModelMixin, UpdateModelMixin, 
     permission_classes = [IsSuperUser]
 
 
-class NotificationViewSet(GenericViewSet, CreateModelMixin, ReadOnlyModelViewSet, DestroyModelMixin):
+class NotificationViewSet(GenericViewSet, ListModelMixin, CreateModelMixin, RetrieveModelMixin, DestroyModelMixin):
     def get_queryset(self):
         return Notification.objects.filter(type='GN', user=self.request.user).order_by('-created')
 
