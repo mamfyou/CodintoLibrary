@@ -1,10 +1,8 @@
 from django.db.models import Max
 from rest_framework import status
-from rest_framework.generics import CreateAPIView, ListCreateAPIView
-from rest_framework.mixins import UpdateModelMixin, ListModelMixin, RetrieveModelMixin, CreateModelMixin, \
-    DestroyModelMixin
+from rest_framework.mixins import UpdateModelMixin, ListModelMixin, CreateModelMixin, DestroyModelMixin
 from rest_framework.response import Response
-from rest_framework.viewsets import GenericViewSet, ModelViewSet
+from rest_framework.viewsets import GenericViewSet, ModelViewSet, ReadOnlyModelViewSet
 from .Filter import *
 from .permissoins import *
 from .serializer import *
@@ -68,15 +66,23 @@ class BookViewset(ModelViewSet):
     permission_classes = [IsSuperUser]
 
 
-class Category(ListModelMixin, CreateModelMixin, RetrieveModelMixin, UpdateModelMixin, GenericViewSet):
+class CategoryViewSet(ReadOnlyModelViewSet, CreateModelMixin, UpdateModelMixin, GenericViewSet):
     serializer_class = CategorySerializer
     queryset = BookCategory.objects.all()
     permission_classes = [IsSuperUser]
 
 
-class NotificationViewSet(GenericViewSet, ListModelMixin, CreateModelMixin, RetrieveModelMixin, DestroyModelMixin):
+class NotificationViewSet(GenericViewSet, CreateModelMixin, ReadOnlyModelViewSet, DestroyModelMixin):
     def get_queryset(self):
         return Notification.objects.filter(type='GN', user=self.request.user).order_by('-created')
 
     serializer_class = NotificationSerializer
+    permission_classes = [IsSuperUser]
+
+
+class HistoryViewSet(ListModelMixin, GenericViewSet):
+    def get_queryset(self):
+        return History.objects.filter(is_active=False, is_accepted=True).order_by('-created')
+
+    serializer_class = HistorySerializer
     permission_classes = [IsSuperUser]

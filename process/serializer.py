@@ -18,6 +18,7 @@ class CreateUserSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             'password': {'write_only': True}
         }
+
     confirm_password = serializers.CharField(max_length=128, write_only=True)
 
     def create(self, validated_data):
@@ -141,6 +142,7 @@ class RequestSerializer(serializers.ModelSerializer):
                 instance.book.count += 1
                 instance.book.save()
                 history.is_active = False
+                history.end_date = datetime.today()
                 history.save()
                 if instance.book.count == 1:
                     available_book.send_robust(sender=self.__class__, book_id=instance.book.id)
@@ -237,3 +239,15 @@ class NotificationSerializer(serializers.ModelSerializer):
                                       description=validated_data.get('description'),
                                       book=validated_data.get('book', None))
         return validated_data
+
+
+class HistorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = History
+        fields = ['id', 'user', 'book', 'start_date', 'end_date']
+
+    def get_book_name(self, obj):
+        return obj.book.name
+
+    user = serializers.StringRelatedField()
+    book = serializers.SerializerMethodField(method_name='get_book_name')
