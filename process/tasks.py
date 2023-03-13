@@ -13,16 +13,16 @@ def make_notifications_for_available_book(book_id):
     for i in AvailableNotification.objects.filter(book=book):
         Notification.objects.create(user=i.user, type='GN', title='موجود شد!',
                                     description=f'هم اکنون موجود شد!' + f'{book.name}' + f'کتاب',
-                                    book=book.id)
+                                    book=book)
 
 
 @shared_task
 def make_new_book_notification(book_id):
     book = Book.objects.get(id=book_id)
+    print(book)
     for i in get_user_model().objects.all():
-        Notification.objects.create(user=i, type='GN', title='کتاب جدید!',
-                                    description=f'به کتابخانه کدینتو اضافه شد🥳' + f'{book.name}' + f'کتاب',
-                                    book=book.id)
+        Notification.objects.create(user=i, type='GN', title='کتاب جدید!', book=book,
+                                    description=f'به کتابخانه کدینتو اضافه شد🥳' + f'{book.name}' + f'کتاب')
 
 
 @shared_task

@@ -3,9 +3,10 @@ from datetime import datetime, timedelta, date
 
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
+from drf_writable_nested import WritableNestedModelSerializer
 
 from books.models import Book, Comment, Rate, BookCategory
-from books.serializer import CategorySimpleSerializer, CategoryMultipleParentSerializer
+from books.serializer import CategoryMultipleParentSerializer
 from process.models import Request, History, Notification
 from process.signals import available_book, new_general_notif
 
@@ -180,27 +181,43 @@ class RequestSerializer(serializers.ModelSerializer):
         return validated_data.get('is_accepted')
 
 
-class BookSerializer(serializers.ModelSerializer):
+class CategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BookCategory
+        fields = ['id', 'name', 'parent', 'indent']
+        read_only_fields = ['indent']
+
+
+class BookSerializer(WritableNestedModelSerializer):
     class Meta:
         model = Book
         fields = ['id', 'name', 'owner', 'publisher', 'publish_date', 'volume_num', 'page_count', 'author',
                   'translator', 'description', 'category', 'Category', 'picture', 'count']
         extra_kwargs = {
-            'Category': {'read_only': True},
             'category': {'write_only': True},
         }
 
-    Category = serializers.SerializerMethodField(method_name='get_category')
+    category = serializers.ListField(child=serializers.IntegerField(), write_only=True)
+    Category = serializers.SerializerMethodField(method_name='get_category', read_only=True)
 
     def get_category(self, obj: Book):
         return CategoryMultipleParentSerializer(obj.category.all(), many=True).data
+
+    def create(self, validated_data):
+        category_names = validated_data.pop('category', [])
+        book = Book.objects.create(**validated_data)
+        for category_name in category_names:
+            BookCategory.objects.get(id=category_name)
+            book.category.add(category_name)
+        return book
 
     def validate(self, data):
         persian_letters = re.compile(r'[\u0600-\u06FF]+')
         if data.get('publish_date') >= date.today():
             raise serializers.ValidationError('تاریخ نشر نمیتواند دیر از زمان حال باشد!')
-        elif not re.search(persian_letters, data.get('translator')):
-            raise serializers.ValidationError('نام مترجم باید به فارسی باشد!')
+        elif data.get('translator') is not None:
+            if not re.search(persian_letters, data.get('translator')):
+                raise serializers.ValidationError('نام مترجم باید به فارسی باشد!')
         elif data.get('picture').size >= 5000000:
             raise serializers.ValidationError('سایز عکس نباید بیشتر از ۵ مگابایت باشد!')
         elif data.get('count') == 0:
@@ -212,13 +229,6 @@ class BookListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Book
         fields = ['id', 'name', 'author', 'thumbnail']
-
-
-class CategorySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = BookCategory
-        fields = ['id', 'name', 'parent', 'indent']
-        read_only_fields = ['indent']
 
 
 class NotificationSerializer(serializers.ModelSerializer):

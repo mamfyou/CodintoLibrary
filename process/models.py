@@ -34,7 +34,7 @@ class Notification(models.Model):
     description = models.TextField(max_length=500)
     user = models.ForeignKey(get_user_model(), related_name='userNotification', on_delete=models.CASCADE)
     created = models.DateTimeField(auto_now_add=True)
-    book = models.ForeignKey(Book, on_delete=models.PROTECT, default=1)
+    book = models.ForeignKey(Book, on_delete=models.PROTECT)
     is_read = models.BooleanField(default=False)
 
 
