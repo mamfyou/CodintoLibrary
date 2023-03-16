@@ -47,13 +47,13 @@ class BookViewset(ModelViewSet):
 
     def get_queryset(self):
         max_indent = BookCategory.objects.all().aggregate(Max('indent'))['indent__max']
-        return Book.objects.prefetch_related('category' + '__parent' * max_indent).all().order_by('-created_at')
+        return Book.objects.select_related('owner').prefetch_related(
+            'category' + '__parent' * max_indent).all().order_by('-created_at')
 
     def get_serializer_class(self):
         if self.request.method == 'GET' and self.kwargs.get('pk') is None:
             return BookListSerializer
         return BookSerializer
-
 
     search_fields = ['name']
     filterset_fields = ['category']
@@ -71,6 +71,7 @@ class BookViewset(ModelViewSet):
         instance = self.get_object()
         self.perform_destroy(instance)
         return Response({'message': 'با موفقیت حذف شد!'}, status=status.HTTP_204_NO_CONTENT)
+
 
 class CategoryViewSet(ReadOnlyModelViewSet, CreateModelMixin, UpdateModelMixin, GenericViewSet):
     serializer_class = CategorySerializer
