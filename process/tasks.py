@@ -18,11 +18,15 @@ def make_notifications_for_available_book(book_id):
 
 @shared_task
 def make_new_book_notification(book_id):
-    book = Book.objects.get(id=book_id)
-    print(book)
+    try:
+        book = Book.objects.get(id=book_id)
+    except Book.DoesNotExist:
+        print(f"Error: Book with id={book_id} does not exist.")
+        return
     for i in get_user_model().objects.all():
         Notification.objects.create(user=i, type='GN', title='کتاب جدید!', book=book,
-                                    description=f'به کتابخانه کدینتو اضافه شد🥳' + f'{book.name}' + f'کتاب')
+                                    description=(f'به کتابخانه کدینتو اضافه شد🥳' + f'{book.name}' + f'کتاب'),
+                                    )
 
 
 @shared_task

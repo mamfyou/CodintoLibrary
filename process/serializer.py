@@ -7,6 +7,7 @@ from drf_writable_nested import WritableNestedModelSerializer
 
 from books.models import Book, Comment, Rate, BookCategory
 from books.serializer import CategoryMultipleParentSerializer
+from users.models import BookUser
 from process.models import Request, History, Notification
 from process.signals import available_book, new_general_notif
 
@@ -191,14 +192,16 @@ class CategorySerializer(serializers.ModelSerializer):
 class BookSerializer(WritableNestedModelSerializer):
     class Meta:
         model = Book
-        fields = ['id', 'name', 'owner', 'publisher', 'publish_date', 'volume_num', 'page_count', 'author',
-                  'translator', 'description', 'category', 'Category', 'picture', 'count']
+        fields = ['id', 'name', 'owner_name', 'publisher', 'publish_date', 'volume_num', 'page_count', 'author',
+                  'translator', 'description', 'category', 'categories', 'picture', 'count', 'owner']
         extra_kwargs = {
             'category': {'write_only': True},
+            'owner': {'write_only': True},
         }
 
     category = serializers.ListField(child=serializers.IntegerField(), write_only=True)
-    Category = serializers.SerializerMethodField(method_name='get_category', read_only=True)
+    categories = serializers.SerializerMethodField(method_name='get_category', read_only=True)
+    owner_name = serializers.StringRelatedField(read_only=True, source='owner')
 
     def get_category(self, obj: Book):
         return CategoryMultipleParentSerializer(obj.category.all(), many=True).data

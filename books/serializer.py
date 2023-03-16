@@ -2,13 +2,13 @@ import re
 from datetime import date, datetime, timedelta
 
 from django.db.models import F, Avg
-from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from books.models import Book, BookCategory, Comment, Rate, LikeHistory, DislikeHistory
 from process.models import AvailableNotification, History, Request
+from users.serializer import PanelMainPageSerializer
 
 
 class RateSimpleSerializer(serializers.ModelSerializer):
@@ -41,11 +41,12 @@ class CommentSerializer(serializers.ModelSerializer):
         model = Comment
         fields = ['id', 'user', 'text', 'like_count', 'dislike_count', 'rate']
 
+    user = PanelMainPageSerializer(read_only=True)
     def get_rate(self, obj):
         rate_object = Rate.objects.filter(user=self.context['user'], book_id=self.context['book_id'])
         if rate_object.exists():
             return rate_object.first().rate
-        return None
+        return 3
 
     rate = serializers.SerializerMethodField(method_name='get_rate')
 

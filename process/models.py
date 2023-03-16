@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import models
 
@@ -34,8 +33,10 @@ class Notification(models.Model):
     description = models.TextField(max_length=500)
     user = models.ForeignKey(get_user_model(), related_name='userNotification', on_delete=models.CASCADE)
     created = models.DateTimeField(auto_now_add=True)
-    book = models.ForeignKey(Book, on_delete=models.PROTECT)
+    book = models.ForeignKey(Book, on_delete=models.SET_NULL, related_name='notificationBook', null=True)
     is_read = models.BooleanField(default=False)
+    # is_readi = models.BooleanField(default=False)
+
 
 
 class Request(models.Model):

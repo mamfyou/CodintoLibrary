@@ -23,7 +23,7 @@ urlpatterns = [
       path('', include('books.urls')),
       path('', include('users.urls')),
       path('', include('process.urls')),
-      path('auth/', include('djoser.urls.jwt')),
+      path('auth/', include('rest_framework.urls')),
       path('admin/', admin.site.urls),
       path('__debug__/', include('debug_toolbar.urls')),
       re_path(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0),
