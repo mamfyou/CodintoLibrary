@@ -77,6 +77,7 @@ class CategoryViewSet(ReadOnlyModelViewSet, CreateModelMixin, UpdateModelMixin, 
     serializer_class = CategorySerializer
     queryset = BookCategory.objects.all()
     permission_classes = [IsSuperUser]
+    filterset_fields = ['parent']
 
 
 class NotificationViewSet(GenericViewSet, ListModelMixin, CreateModelMixin, RetrieveModelMixin, DestroyModelMixin):
