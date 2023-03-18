@@ -185,8 +185,7 @@ class RequestSerializer(serializers.ModelSerializer):
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = BookCategory
-        fields = ['id', 'name', 'parent', 'indent']
-        read_only_fields = ['indent']
+        fields = ['id', 'name', 'parent']
 
 
 class BookSerializer(WritableNestedModelSerializer):
