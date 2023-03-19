@@ -373,3 +373,4 @@ fabric.properties
 
 # End of https://www.toptal.com/developers/gitignore/api/django,pycharm,python
 /*/migrations/*.py
+/BookManagement/settings_deploy.py
