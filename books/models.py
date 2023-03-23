@@ -9,21 +9,21 @@ from django.dispatch import receiver
 
 
 class Book(models.Model):
-    name = models.CharField(max_length=100)
-    picture = models.ImageField(upload_to='media/book_pic')
-    thumbnail = models.ImageField(upload_to='media/thumbnails', editable=False)
-    description = models.TextField()
-    owner = models.ForeignKey(get_user_model(), on_delete=models.PROTECT, related_name='bookOwner')
-    author = models.CharField(max_length=100)
-    publisher = models.CharField(max_length=100)
-    publish_date = models.DateField()
-    translator = models.CharField(max_length=100, null=True, blank=True)
-    page_count = models.PositiveIntegerField()
-    volume_num = models.PositiveIntegerField()
-    count = models.PositiveIntegerField(default=1)
-    created_at = models.DateField(auto_now_add=True)
-    category = models.ManyToManyField('BookCategory', related_name='bookCategory')
-    wanted_to_read = models.PositiveIntegerField(default=0)
+    name = models.CharField(max_length=100, verbose_name='نام کتاب')
+    picture = models.ImageField(upload_to='media/book_pic', verbose_name='عکس کتاب')
+    thumbnail = models.ImageField(upload_to='media/thumbnails', editable=False, verbose_name='تامبنیل')
+    description = models.TextField(verbose_name='توضیحات')
+    owner = models.ForeignKey(get_user_model(), on_delete=models.PROTECT, related_name='bookOwner', verbose_name='صاحب کتاب')
+    author = models.CharField(max_length=100, verbose_name='نویسنده')
+    publisher = models.CharField(max_length=100, verbose_name='انتشارات')
+    publish_date = models.DateField(verbose_name='تاریخ انتشار')
+    translator = models.CharField(max_length=100, null=True, blank=True, verbose_name='مترجم')
+    page_count = models.PositiveIntegerField(verbose_name='تعداد صفحات')
+    volume_num = models.PositiveIntegerField(verbose_name='شماره جلد')
+    count = models.PositiveIntegerField(default=1, verbose_name='تعداد')
+    created_at = models.DateField(auto_now_add=True, verbose_name='تاریخ اضافه شدن کتاب')
+    category = models.ManyToManyField('BookCategory', related_name='bookCategory', verbose_name='دسته بندی')
+    wanted_to_read = models.PositiveIntegerField(default=0, verbose_name='تعداد دفعات خوانده شده')
 
     def __str__(self):
         return f'{self.name}' + ' - ' + f'{self.author}'
@@ -68,43 +68,42 @@ class Book(models.Model):
 
 
 class BookCategory(models.Model):
-    name = models.CharField(max_length=100)
-    parent = models.ForeignKey('BookCategory', on_delete=models.CASCADE, null=True, blank=True)
-    description = models.TextField()
-    indent = models.PositiveIntegerField(default=0)
+    name = models.CharField(max_length=100, verbose_name='نام دسته بندی')
+    parent = models.ForeignKey('BookCategory', on_delete=models.CASCADE, null=True, blank=True, verbose_name='دسته بندی والد')
+    description = models.TextField(verbose_name='توضیحات')
+    indent = models.PositiveIntegerField(default=0, verbose_name='تعداد تو در تو')
 
     def __str__(self):
         return self.name
 
 
 class Rate(models.Model):
-    user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='userRate')
-    book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name='bookRate')
-    rate = models.PositiveIntegerField(default=3)
-    created_at = models.DateTimeField(auto_now_add=True)
+    user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='userRate', verbose_name='کاربر')
+    book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name='bookRate', verbose_name='کتاب')
+    rate = models.PositiveIntegerField(default=3, verbose_name='امتیاز')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاریخ ثبت')
 
 
 class Comment(models.Model):
-    user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='userComment')
-    book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name='bookComment')
-    # rate = models.OneToOneField(Rate, on_delete=models.CASCADE, related_name='rateComment', null=True, blank=True)
-    text = models.TextField(max_length=500, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    like_count = models.PositiveIntegerField(default=0)
-    dislike_count = models.PositiveIntegerField(default=0)
+    user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='userComment', verbose_name='کاربر')
+    book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name='bookComment', verbose_name='کتاب')
+    text = models.TextField(max_length=500, null=True, blank=True, verbose_name='متن')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاریخ ثبت')
+    like_count = models.PositiveIntegerField(default=0, verbose_name='تعداد لایک')
+    dislike_count = models.PositiveIntegerField(default=0, verbose_name='تعداد دیسلایک')
 
     def __str__(self):
         return str(self.user) + " -> " + str(self.book)
 
 
 class LikeHistory(models.Model):
-    comment = models.ForeignKey(Comment, on_delete=models.CASCADE, related_name='commentLike')
-    user = models.ForeignKey(get_user_model(), on_delete=models.PROTECT, related_name='likeUser')
+    comment = models.ForeignKey(Comment, on_delete=models.CASCADE, related_name='commentLike', verbose_name='کامنت')
+    user = models.ForeignKey(get_user_model(), on_delete=models.PROTECT, related_name='likeUser', verbose_name='کاربر')
 
 
 class DislikeHistory(models.Model):
-    comment = models.ForeignKey(Comment, on_delete=models.CASCADE, related_name='commentDislike')
-    user = models.ForeignKey(get_user_model(), on_delete=models.PROTECT, related_name='DislikeUser')
+    comment = models.ForeignKey(Comment, on_delete=models.CASCADE, related_name='commentDislike', verbose_name='کامنت')
+    user = models.ForeignKey(get_user_model(), on_delete=models.PROTECT, related_name='DislikeUser', verbose_name='کاربر')
 
 
 @receiver(pre_save, sender=BookCategory)

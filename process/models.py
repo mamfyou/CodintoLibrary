@@ -5,14 +5,14 @@ from books.models import Book
 
 
 class History(models.Model):
-    user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='userHistory')
-    book = models.ForeignKey("books.Book", on_delete=models.CASCADE, related_name='bookHistory')
-    created = models.DateTimeField(auto_now_add=True)
-    start_date = models.DateField()
-    end_date = models.DateField()
-    is_extended = models.BooleanField(default=False)
-    is_active = models.BooleanField(default=True)
-    is_accepted = models.BooleanField(default=False)
+    user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='userHistory', verbose_name='کاربر')
+    book = models.ForeignKey("books.Book", on_delete=models.CASCADE, related_name='bookHistory', verbose_name='کتاب')
+    created = models.DateTimeField(auto_now_add=True, verbose_name='تاریخ ثبت')
+    start_date = models.DateField(verbose_name='تاریخ شروع')
+    end_date = models.DateField(verbose_name='تاریخ پایان')
+    is_extended = models.BooleanField(default=False, verbose_name='تمدید شده')
+    is_active = models.BooleanField(default=True, verbose_name='فعال')
+    is_accepted = models.BooleanField(default=False, verbose_name='تایید شده')
 
     def __str__(self):
         return f'{self.book.name}' + '->' + f'{self.user.name}'
@@ -28,15 +28,13 @@ class Notification(models.Model):
         ('AV', 'Available'),
         ('CM', 'Comment'),
     )
-    type = models.CharField(max_length=2, choices=TYPE_CHOICES, default='GN')
-    title = models.CharField(max_length=50)
-    description = models.TextField(max_length=500)
-    user = models.ForeignKey(get_user_model(), related_name='userNotification', on_delete=models.CASCADE)
-    created = models.DateTimeField(auto_now_add=True)
-    book = models.ForeignKey(Book, on_delete=models.SET_NULL, related_name='notificationBook', null=True)
-    is_read = models.BooleanField(default=False)
-    # is_readi = models.BooleanField(default=False)
-
+    type = models.CharField(max_length=2, choices=TYPE_CHOICES, default='GN', verbose_name='نوع')
+    title = models.CharField(max_length=50, verbose_name='عنوان')
+    description = models.TextField(max_length=500, verbose_name='توضیحات')
+    user = models.ForeignKey(get_user_model(), related_name='userNotification', on_delete=models.CASCADE, verbose_name='کاربر')
+    created = models.DateTimeField(auto_now_add=True, verbose_name='تاریخ ثبت')
+    book = models.ForeignKey(Book, on_delete=models.SET_NULL, related_name='notificationBook', null=True, blank=True, verbose_name='کتاب')
+    is_read = models.BooleanField(default=False, verbose_name='خوانده شده')
 
 
 class Request(models.Model):
@@ -47,15 +45,15 @@ class Request(models.Model):
         ('CM', 'کامنت'),
     )
 
-    user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='requestUser')
-    book = models.ForeignKey("books.Book", on_delete=models.CASCADE, related_name='requestBook')
-    type = models.CharField(max_length=2, choices=TYPE_CHOICES)
-    created = models.DateTimeField(auto_now_add=True)
-    metadata = models.JSONField(null=True, blank=True, default=None)
-    is_read = models.BooleanField(default=False)
-    is_accepted = models.BooleanField(default=None, null=True)
+    user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='requestUser', verbose_name='کاربر')
+    book = models.ForeignKey("books.Book", on_delete=models.CASCADE, related_name='requestBook', verbose_name='کتاب')
+    type = models.CharField(max_length=2, choices=TYPE_CHOICES, verbose_name='نوع')
+    created = models.DateTimeField(auto_now_add=True, verbose_name='تاریخ ثبت')
+    metadata = models.JSONField(null=True, blank=True, default=None, verbose_name='متادیتا')
+    is_read = models.BooleanField(default=False, verbose_name='خوانده شده')
+    is_accepted = models.BooleanField(default=None, null=True, blank=True, verbose_name='تایید شده')
 
 
 class AvailableNotification(models.Model):
-    user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='availableNotifUser')
-    book = models.ForeignKey("books.Book", on_delete=models.CASCADE, related_name='availableNotifBook')
+    user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='availableNotifUser', verbose_name='کاربر')
+    book = models.ForeignKey("books.Book", on_delete=models.CASCADE, related_name='availableNotifBook', verbose_name='کتاب')
