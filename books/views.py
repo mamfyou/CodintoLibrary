@@ -12,13 +12,15 @@ class BookMainPage(ReadOnlyModelViewSet):
         if self.kwargs.get('pk') is None:
             return Book.objects.select_related('owner').all()[0:1]
         max_indent = BookCategory.objects.all().aggregate(Max('indent'))['indent__max']
+        if max_indent is None:
+            max_indent = 0
         return Book.objects.select_related('owner'). \
-            prefetch_related('category' + '__parent' * max_indent).all()
+            prefetch_related('category' + ('__parent' * max_indent)).all()
 
     def get_serializer_context(self):
         return {'user': self.request.user,
                 'request': self.request,
-                'book_id' : self.kwargs.get('pk'),
+                'book_id': self.kwargs.get('pk'),
                 'history': History.objects.filter(user=self.request.user,
                                                   book_id=self.kwargs.get('pk'),
                                                   is_active=True,
