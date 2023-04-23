@@ -47,6 +47,8 @@ class BookViewset(ModelViewSet):
 
     def get_queryset(self):
         max_indent = BookCategory.objects.all().aggregate(Max('indent'))['indent__max']
+        if max_indent is None:
+            max_indent = 0
         return Book.objects.select_related('owner').prefetch_related(
             'category' + '__parent' * max_indent).all().order_by('-created_at')
 
