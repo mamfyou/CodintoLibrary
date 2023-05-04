@@ -2,12 +2,11 @@ import re
 from datetime import datetime, timedelta, date
 
 from django.contrib.auth import get_user_model
-from rest_framework import serializers
 from drf_writable_nested import WritableNestedModelSerializer
+from rest_framework import serializers
 
 from books.models import Book, Comment, Rate, BookCategory
 from books.serializer import CategoryMultipleParentSerializer
-from users.models import BookUser
 from process.models import Request, History, Notification
 from process.signals import available_book, new_general_notif
 
@@ -42,7 +41,7 @@ class CreateUserSerializer(serializers.ModelSerializer):
         elif re.search('[a-zA-Z]', data.get('last_name')):
             raise serializers.ValidationError('نام خانوادگی نمیتواند شامل حروف انگلیسی باشد!😉')
         elif data.get('picture') is not None:
-            if data.get('picture').size > 5000000:
+            if data.get('picture').size > 1024 * 1024 * 5:
                 raise serializers.ValidationError('حجم عکس نباید بیشتر از ۵ مگابایت باشد!')
         elif not re.fullmatch(r'09\d{9}', data.get('phone_number')):
             raise serializers.ValidationError('شماره تلفن همراه شما معتبر نیست!')
@@ -74,8 +73,8 @@ class BookRequestSerializer(serializers.ModelSerializer):
 class RequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = Request
-        fields = ['id', 'user', 'book', 'type', 'metadata', 'is_accepted', 'is_read']
-        read_only_fields = ['user', 'book', 'metadata', 'type']
+        fields = ['id', 'user', 'book', 'type', 'metadata', 'is_accepted', 'is_read', 'created']
+        read_only_fields = ['user', 'book', 'metadata', 'type', 'created']
 
     book = BookRequestSerializer(read_only=True)
     is_accepted = serializers.BooleanField(allow_null=True)
@@ -104,25 +103,26 @@ class RequestSerializer(serializers.ModelSerializer):
         if instance.type == 'BR':
             history = History.objects.filter(user=instance.user, book=instance.book, is_active=True,
                                              is_accepted=False).first()
-            if validated_data.get('is_accepted') is True and history.book.count >= 1:
-                book = history.book
-                history.end_date = datetime.now() + timedelta(days=instance.metadata.get('end_date'))
-                history.start_date = datetime.now()
-                history.is_accepted = True
-                history.is_active = True
-                history.book.count -= 1
-                history.book.wanted_to_read += 1
-                history.save()
-                history.book.save()
-                Notification.objects.create(user=instance.user, book=instance.book, type='BR',
-                                            title='امانت کتاب',
-                                            description=f'تایید شد😍' + f'{instance.book.name}' + f'درخواست شما برای امانت کتاب ')
+            if validated_data.get('is_accepted'):
+                if validated_data.get('is_accepted') is True and history.book.count >= 1:
+                    book = history.book
+                    history.end_date = datetime.now() + timedelta(days=instance.metadata.get('end_date'))
+                    history.start_date = datetime.now()
+                    history.is_accepted = True
+                    history.is_active = True
+                    history.book.count -= 1
+                    history.book.wanted_to_read += 1
+                    history.save()
+                    history.book.save()
+                    Notification.objects.create(user=instance.user, book=instance.book, type='BR',
+                                                title='امانت کتاب',
+                                                description=f'تایید شد😍' + f'{instance.book.name}' + f'درخواست شما برای امانت کتاب ')
 
-            elif validated_data.get('is_accepted') is False or history.book.count == 0:
-                history.delete()
-                Notification.objects.create(user=instance.user, book=instance.book, type='BR',
-                                            title='امانت کتاب',
-                                            description=f'تایید نشد😢' + f'{instance.book.name}' + f'متاسفانه درخواست شما برای امانت کتاب ')
+                elif validated_data.get('is_accepted') is False or history.book.count == 0:
+                    history.delete()
+                    Notification.objects.create(user=instance.user, book=instance.book, type='BR',
+                                                title='امانت کتاب',
+                                                description=f'تایید نشد😢' + f'{instance.book.name}' + f'متاسفانه درخواست شما برای امانت کتاب ')
         elif instance.type == 'EX':
             history = History.objects.get(user=instance.user, book=instance.book, is_active=True, is_accepted=True)
             if validated_data.get('is_accepted') is True:
@@ -236,9 +236,12 @@ class BookListSerializer(serializers.ModelSerializer):
 class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification
-        fields = ['id', 'title', 'description', 'book']
+        fields = ['id', 'title', 'description', 'book', 'book_detail']
+        extra_kwargs = {
+            'book': {'write_only': True},
+        }
 
-    book = serializers.SerializerMethodField(method_name='get_book')
+    book_detail = serializers.SerializerMethodField(method_name='get_book')
 
     def get_book(self, obj):
         try:
@@ -247,9 +250,10 @@ class NotificationSerializer(serializers.ModelSerializer):
             return None
 
     def create(self, validated_data):
+        # validated_data['book'] = Book.objects.get(id=validated_data.get('book'))
         new_general_notif.send_robust(sender=self.__class__, title=validated_data.get('title'),
                                       description=validated_data.get('description'),
-                                      book=validated_data.get('book', None))
+                                      book=validated_data['book'].id)
         return validated_data
 
 

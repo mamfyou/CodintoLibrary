@@ -4,6 +4,7 @@ from rest_framework.mixins import UpdateModelMixin, ListModelMixin, RetrieveMode
     DestroyModelMixin
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet, ModelViewSet, ReadOnlyModelViewSet
+
 from .Filter import *
 from .permissoins import *
 from .serializer import *
@@ -96,3 +97,4 @@ class HistoryViewSet(ListModelMixin, GenericViewSet):
 
     serializer_class = HistorySerializer
     permission_classes = [IsSuperUser]
+    filterset_class = HistoryFilter
