@@ -260,7 +260,7 @@ class NotificationSerializer(serializers.ModelSerializer):
 class HistorySerializer(serializers.ModelSerializer):
     class Meta:
         model = History
-        fields = ['id', 'user', 'book', 'start_date', 'end_date']
+        fields = ['id', 'user', 'book', 'start_date', 'end_date', 'is_accepted']
 
     def get_book_name(self, obj):
         return obj.book.name

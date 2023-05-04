@@ -1,9 +1,10 @@
 from rest_framework import status
 from rest_framework.generics import RetrieveUpdateAPIView, ListAPIView
-from rest_framework.mixins import ListModelMixin, UpdateModelMixin, DestroyModelMixin
+from rest_framework.mixins import ListModelMixin, UpdateModelMixin, DestroyModelMixin, RetrieveModelMixin
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet, ModelViewSet
 
+from process.serializer import HistorySerializer
 from .Filter import *
 from .serializer import *
 
@@ -86,3 +87,12 @@ class PanelBookshelfViewSet(ModelViewSet):
 
     def get_serializer_context(self):
         return {'user': self.request.user, 'request': self.request}
+
+
+class PanelHistoryViewSet(ListModelMixin, GenericViewSet, RetrieveModelMixin):
+    def get_queryset(self):
+        return History.objects.filter(user=self.request.user).order_by('-created')
+
+    serializer_class = HistorySerializer
+    search_fields = ['book__title']
+    filterset_fields = ['is_accepted']

@@ -7,6 +7,7 @@ router = DefaultRouter()
 router.register(r'panel/bookshelf', PanelBookshelfViewSet, basename='panel-bookshelf')
 router.register(r'panel/notification', PanelNotificationViewSet, basename='panel-notification')
 router.register(r'panel/comments', PanelCommentViewSet, basename='panel-comment')
+router.register(r'panel/history', PanelHistoryViewSet, basename='panel-history')
 
 urlpatterns = [
     path('', include(router.urls)),

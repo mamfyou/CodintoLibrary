@@ -2,13 +2,13 @@ import re
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from books.models import Book, Comment
-from .models import Bookshelf
+from .models import Bookshelf, BookUser
 from process.models import History, Notification, Request
 
 
 class PanelMainPageSerializer(serializers.ModelSerializer):
     class Meta:
-        model = get_user_model()
+        model = BookUser
         fields = ['id', 'picture', 'first_name', 'last_name']
 
 
