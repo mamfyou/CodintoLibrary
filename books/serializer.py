@@ -187,7 +187,7 @@ class BookExtendSerializer(serializers.ModelSerializer):
         return validated_data
 
     def validate(self, data):
-        book = self.instance
+        book = Book.objects.get(id=self.context['book_id'])
         has_book = History.objects.filter(user=self.context['user'],
                                           book=book,
                                           is_active=True,

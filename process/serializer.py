@@ -106,6 +106,7 @@ class RequestSerializer(serializers.ModelSerializer):
                                              is_accepted=False).first()
             if validated_data.get('is_accepted'):
                 if validated_data.get('is_accepted') is True and history.book.count >= 1:
+                    print('safd;accepted')
                     book = history.book
                     history.end_date = datetime.now() + timedelta(days=instance.metadata.get('end_date'))
                     history.start_date = datetime.now()
