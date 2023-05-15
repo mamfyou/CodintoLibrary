@@ -17,6 +17,14 @@ class UserViewSet(ModelViewSet):
     serializer_class = CreateUserSerializer
     permission_classes = [IsSuperUser]
 
+    def destroy(self, request, *args, **kwargs):
+
+        instance = self.get_object()
+        if instance.is_superuser:
+            return Response(data={'message': 'شما نمیتوانید مدیر کتابخانه را حذف کنید!'}, status=status.HTTP_400_BAD_REQUEST)
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 class RequestViewset(GenericViewSet, ListModelMixin, UpdateModelMixin):
     lookup_field = 'pk'
