@@ -15,9 +15,10 @@ class CreateUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = get_user_model()
         fields = ['id', 'first_name', 'last_name', 'username', 'password', 'confirm_password', 'phone_number', 'email',
-                  'telegram_id']
+                  'telegram_id', 'picture']
         extra_kwargs = {
-            'password': {'write_only': True}
+            'password': {'write_only': True},
+            'picture': {'read_only': True}
         }
 
     confirm_password = serializers.CharField(max_length=128, write_only=True)
