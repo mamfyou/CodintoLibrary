@@ -118,27 +118,30 @@ class BookBorrowSerializer(serializers.ModelSerializer):
     thumbnail = serializers.SerializerMethodField(method_name='get_thumbnail')
 
     def get_thumbnail(self, obj):
+        book = Book.objects.get(id=self.context['book_id'])
         request = self.context['request']
-        photo_url = obj.thumbnail.url
+        photo_url = book.thumbnail.url
         return request.build_absolute_uri(photo_url)
 
     def create(self, validated_data):
+        book = Book.objects.get(id=self.context['book_id'])
         History.objects.create(
             user=self.context['user'],
-            book=self.context['book'],
+            book=book,
             start_date=date.today(),
             end_date=datetime.now() + timedelta(days=validated_data['end_date']),
         )
         Request.objects.create(
             type='BR',
             user=self.context['user'],
-            book=self.instance,
+            book=book,
             metadata=validated_data
         )
         return validated_data
 
     def validate(self, data):
-        book = self.instance
+        book = Book.objects.get(id=self.context['book_id'])
+        print(book)
         has_request = Request.objects.filter(user=self.context['user'],
                                              is_accepted__isnull=True, )
 

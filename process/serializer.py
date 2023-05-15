@@ -62,7 +62,7 @@ class CreateUserSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('رمز عبور شما خیلی ساده است!')
         elif data.get('first_name') in data.get('password') or data.get('last_name') in data.get('password'):
             raise serializers.ValidationError('رمز عبور نباید شامل نام شما باشد!')
-        return data
+        return super().validate(data)
 
 
 class BookRequestSerializer(serializers.ModelSerializer):
