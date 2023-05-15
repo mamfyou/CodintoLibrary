@@ -171,13 +171,13 @@ class BookExtendSerializer(serializers.ModelSerializer):
     thumbnail = serializers.SerializerMethodField(method_name='get_thumbnail')
 
     def get_thumbnail(self, obj: Book):
-        book = obj
+        book = Book.objects.get(id=self.context['book_id'])
         request = self.context['request']
         photo_url = book.thumbnail.url
         return request.build_absolute_uri(photo_url)
 
     def create(self, validated_data):
-        book = self.instance
+        book = Book.objects.get(id=self.context['book_id'])
         Request.objects.create(
             type='EX',
             user=self.context['user'],
