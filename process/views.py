@@ -5,7 +5,7 @@ from rest_framework.mixins import UpdateModelMixin, ListModelMixin, RetrieveMode
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet, ModelViewSet, ReadOnlyModelViewSet
 
-from .Filter import *
+from .Filter import NotificationFilter, HistoryFilter, RequestFilter
 from .permissoins import *
 from .serializer import *
 from .tasks import make_new_book_notification
@@ -97,6 +97,7 @@ class NotificationViewSet(GenericViewSet, ListModelMixin, CreateModelMixin, Retr
         return Notification.objects.filter(type='GN', user=self.request.user).order_by('-created')
 
     serializer_class = NotificationSerializer
+    filterset_class = NotificationFilter
     permission_classes = [IsSuperUser]
 
 

@@ -1,6 +1,6 @@
 from django_filters import FilterSet
 
-from process.models import Request, History
+from process.models import Request, History, Notification
 
 
 class RequestFilter(FilterSet):
@@ -16,6 +16,14 @@ class RequestFilter(FilterSet):
 class HistoryFilter(FilterSet):
     class Meta:
         model = History
+        fields = {
+            'created': ['gte', 'lte'],
+        }
+
+
+class NotificationFilter(FilterSet):
+    class Meta:
+        model = Notification
         fields = {
             'created': ['gte', 'lte'],
         }
