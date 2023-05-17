@@ -16,6 +16,7 @@ class UserViewSet(ModelViewSet):
     queryset = get_user_model().objects.all()
     serializer_class = CreateUserSerializer
     permission_classes = [IsSuperUser]
+    search_fields = ['username', 'first_name', 'last_name']
 
     def destroy(self, request, *args, **kwargs):
 

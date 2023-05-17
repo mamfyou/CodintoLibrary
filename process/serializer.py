@@ -15,10 +15,11 @@ class CreateUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = get_user_model()
         fields = ['id', 'first_name', 'last_name', 'username', 'password', 'confirm_password', 'phone_number', 'email',
-                  'telegram_id', 'picture']
+                  'telegram_id', 'picture', 'is_superuser']
         extra_kwargs = {
             'password': {'write_only': True},
-            'picture': {'read_only': True}
+            'picture': {'read_only': True},
+            'is_superuser': {'read_only': True}
         }
 
     confirm_password = serializers.CharField(max_length=128, write_only=True)
@@ -71,6 +72,12 @@ class BookRequestSerializer(serializers.ModelSerializer):
         fields = ['id', 'thumbnail', 'name', 'author', 'publisher']
 
 
+class UserSimpleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = get_user_model()
+        fields = ['id', 'first_name', 'last_name', 'username', 'picture']
+
+
 class RequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = Request
@@ -80,6 +87,7 @@ class RequestSerializer(serializers.ModelSerializer):
     book = BookRequestSerializer(read_only=True)
     is_accepted = serializers.BooleanField(allow_null=True)
     is_read = serializers.BooleanField(write_only=True, default=True)
+    user = UserSimpleSerializer(read_only=True)
 
     def validate(self, data):
         if data.get('is_read') is True and self.instance.is_read is True:
@@ -238,12 +246,12 @@ class BookListSerializer(serializers.ModelSerializer):
 class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification
-        fields = ['id', 'title', 'description', 'book', 'book_detail']
+        fields = ['id', 'title', 'description', 'book', 'book_name']
         extra_kwargs = {
             'book': {'write_only': True},
         }
 
-    book_detail = serializers.SerializerMethodField(method_name='get_book')
+    book_name = serializers.SerializerMethodField(method_name='get_book')
 
     def get_book(self, obj):
         try:
@@ -252,7 +260,6 @@ class NotificationSerializer(serializers.ModelSerializer):
             return None
 
     def create(self, validated_data):
-        # validated_data['book'] = Book.objects.get(id=validated_data.get('book'))
         new_general_notif.send_robust(sender=self.__class__, title=validated_data.get('title'),
                                       description=validated_data.get('description'),
                                       book=validated_data['book'].id)
