@@ -114,7 +114,6 @@ class RequestSerializer(serializers.ModelSerializer):
                                              is_accepted=False).first()
             if validated_data.get('is_accepted'):
                 if validated_data.get('is_accepted') is True and history.book.count >= 1:
-                    print('safd;accepted')
                     book = history.book
                     history.end_date = datetime.now() + timedelta(days=instance.metadata.get('end_date'))
                     history.start_date = datetime.now()
@@ -124,26 +123,26 @@ class RequestSerializer(serializers.ModelSerializer):
                     history.book.wanted_to_read += 1
                     history.save()
                     history.book.save()
-                    Notification.objects.create(user=instance.user, book=instance.book, type='BR',
+                    Notification.objects.create(user=instance.user, picture=instance.book.thumbnail, type='BR',
                                                 title='امانت کتاب',
                                                 description=f'تایید شد😍' + f'{instance.book.name}' + f'درخواست شما برای امانت کتاب ')
 
                 elif validated_data.get('is_accepted') is False or history.book.count == 0:
                     history.delete()
-                    Notification.objects.create(user=instance.user, book=instance.book, type='BR',
+                    Notification.objects.create(user=instance.user, picture=instance.book.thumbnail, type='BR',
                                                 title='امانت کتاب',
                                                 description=f'تایید نشد😢' + f'{instance.book.name}' + f'متاسفانه درخواست شما برای امانت کتاب ')
         elif instance.type == 'EX':
-            history = History.objects.get(user=instance.user, book=instance.book, is_active=True, is_accepted=True)
+            history = History.objects.get(user=instance.user, picture=instance.book.thumbnail, is_active=True, is_accepted=True)
             if validated_data.get('is_accepted') is True:
                 history.end_date += timedelta(days=instance.metadata.get('extend_time'))
                 history.is_extended = True
                 history.save()
-                Notification.objects.create(user=instance.user, book=instance.book, type='EX',
+                Notification.objects.create(user=instance.user, picture=instance.book.thumbnail, type='EX',
                                             title='تمدید کتاب',
                                             description=f'تایید شد😍' + f'{instance.book.name}' + f'درخواست شما برای تمدید کتاب ')
             elif validated_data.get('is_accepted') is False:
-                Notification.objects.create(user=instance.user, book=instance.book, type='EX',
+                Notification.objects.create(user=instance.user, picture=instance.book.thumbnail, type='EX',
                                             title='تمدید کتاب',
                                             description=f'تایید نشد😢' + f'{instance.book.name}' + f'متاسفانه درخواست شما برای تمدید کتاب ')
 
@@ -157,8 +156,8 @@ class RequestSerializer(serializers.ModelSerializer):
                 history.end_date = datetime.today()
                 history.save()
                 if instance.book.count == 1:
-                    available_book.send_robust(sender=self.__class__, book_id=instance.book.id)
-                Notification.objects.create(user=instance.user, book=instance.book, type='RT',
+                    available_book.send_robust(sender=self.__class__, picture=instance.book.thumbnail)
+                Notification.objects.create(user=instance.user, picture=instance.book.thumbnail, type='RT',
                                             title='بازگشت کتاب',
                                             description=f'تایید شد😍 امیدواریم تجربه خوبی در کتابخانه کدینتو کسب کرده باشید😊' + f'{instance.book.name}' + f'درخواست شما برای تحویل کتاب ')
 
@@ -182,12 +181,12 @@ class RequestSerializer(serializers.ModelSerializer):
                         self.save = rate.save()
                 Notification.objects.create(user=instance.user,
                                             title='ثبت نظر',
-                                            book=instance.book, type='CM',
+                                            picture=instance.book.thumbnail, type='CM',
                                             description=f'{comment.text}' + f'کامنت:' + f'ثبت شد' + f'{instance.book.name}' + f'نظر شما برای کتاب ')
             elif validated_data.get('is_accepted') is False:
                 Notification.objects.create(user=instance.user,
                                             title='ثبت نظر',
-                                            book=instance.book, type='CM',
+                                            picture=instance.book.thumbnail, type='CM',
                                             description=f'{instance.metadata.get("text")}' + f'کامنت:' + f'تایید نشد' + f'{instance.book.name}' + f'نظر شما برای کتاب')
         return validated_data.get('is_accepted')
 
@@ -246,25 +245,20 @@ class BookListSerializer(serializers.ModelSerializer):
 class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification
-        fields = ['id', 'title', 'description', 'book', 'book_name']
-        extra_kwargs = {
-            'book': {'write_only': True},
-        }
-
-    book_name = serializers.SerializerMethodField(method_name='get_book')
-
-    def get_book(self, obj):
-        try:
-            return obj.book.name
-        except:
-            return None
+        fields = ['id', 'title', 'description', 'picture']
 
     def create(self, validated_data):
         new_general_notif.send_robust(sender=self.__class__, title=validated_data.get('title'),
                                       description=validated_data.get('description'),
-                                      book=validated_data['book'].id)
+                                      picture=validated_data['picture'])
         return validated_data
 
+    def validate(self, attrs):
+        if not attrs.get('picture'):
+            raise serializers.ValidationError('عکس الزامی است!')
+        elif attrs['picture'].size > 2 * 1024 * 1024:
+            raise serializers.ValidationError('حجم عکس نباید بیشتر از ۲ مگابایت باشد!')
+        return attrs
 
 class HistorySerializer(serializers.ModelSerializer):
     class Meta:

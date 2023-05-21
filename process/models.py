@@ -33,7 +33,7 @@ class Notification(models.Model):
     description = models.TextField(max_length=500, verbose_name='توضیحات')
     user = models.ForeignKey(get_user_model(), related_name='userNotification', on_delete=models.CASCADE, verbose_name='کاربر')
     created = models.DateTimeField(auto_now_add=True, verbose_name='تاریخ ثبت')
-    book = models.ForeignKey(Book, on_delete=models.SET_NULL, related_name='notificationBook', null=True, blank=True, verbose_name='کتاب')
+    picture = models.ImageField(upload_to='media/notifications', verbose_name='عکس')
     is_read = models.BooleanField(default=False, verbose_name='خوانده شده')
 
 
