@@ -42,6 +42,7 @@ class CommentSerializer(serializers.ModelSerializer):
         fields = ['id', 'user', 'text', 'like_count', 'dislike_count', 'rate']
 
     user = PanelMainPageSerializer(read_only=True)
+
     def get_rate(self, obj):
         rate_object = Rate.objects.filter(user=self.context['user'], book_id=self.context['book_id'])
         if rate_object.exists():
@@ -356,7 +357,7 @@ class MainPageSerializer(serializers.Serializer):
 class BookSearchSerializer(serializers.ModelSerializer):
     class Meta:
         model = Book
-        fields = ['id', 'name', 'author', 'owner', 'publisher']
+        fields = ['id', 'name', 'thumbnail', 'author', 'owner', 'publisher']
 
 
 class AvailableNotifSerializer(serializers.Serializer):
