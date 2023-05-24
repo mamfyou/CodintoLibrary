@@ -359,6 +359,8 @@ class BookSearchSerializer(serializers.ModelSerializer):
         model = Book
         fields = ['id', 'name', 'thumbnail', 'author', 'owner', 'publisher']
 
+    owner = serializers.StringRelatedField()
+
 
 class AvailableNotifSerializer(serializers.Serializer):
     def create(self, validated_data):
