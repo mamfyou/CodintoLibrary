@@ -51,4 +51,5 @@ def time_warning_notification():
 @shared_task
 def make_new_general_notification_for_every_one(title, description, picture):
     for i in get_user_model().objects.all():
+        # print(picture)
         Notification.objects.create(title=title, description=description, type='GN', user=i, picture=picture)
