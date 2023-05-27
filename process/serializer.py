@@ -174,7 +174,7 @@ class RequestSerializer(serializers.ModelSerializer):
                             rate.save()
                 else:
                     comment = Comment.objects.create(user=instance.user, book=instance.book,
-                                                     text=instance.metadata.get('text'))
+                                                     text=instance.metadata.get('comment'))
                     comment.save()
                     if instance.metadata.get('rate') is not None:
                         rate = Rate.objects.create(user=instance.user, book=instance.book)
