@@ -13,7 +13,7 @@ class Book(models.Model):
     picture = models.ImageField(upload_to='media/book_pic', verbose_name='عکس کتاب')
     thumbnail = models.ImageField(upload_to='media/thumbnails', editable=False, verbose_name='تامبنیل')
     description = models.TextField(verbose_name='توضیحات')
-    owner = models.ForeignKey(get_user_model(), on_delete=models.PROTECT, related_name='bookOwner', verbose_name='صاحب کتاب')
+    owner = models.ForeignKey(get_user_model(), on_delete=models.SET_NULL, related_name='bookOwner', verbose_name='صاحب کتاب')
     author = models.CharField(max_length=100, verbose_name='نویسنده')
     publisher = models.CharField(max_length=100, verbose_name='انتشارات')
     publish_date = models.DateField(verbose_name='تاریخ انتشار')

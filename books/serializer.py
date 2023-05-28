@@ -317,7 +317,7 @@ class CommentFeedbackSerializer(serializers.Serializer):
                 LikeHistory.objects.create(user=self.context.get('user'), comment=comment_obj.first())
         elif validated_data.get('dislike'):
             if dislike_queryset.exists():
-                comment_obj.update(dislike_count=F('like_count') - 1)
+                comment_obj.update(dislike_count=F('dislike_count') - 1)
                 dislike_queryset.delete()
             else:
                 if like_queryset.exists():
