@@ -17,7 +17,7 @@ def login_view(request):
         login(request, user)
         token = Token.objects.get_or_create(user=user)[0].key
 
-        return Response({'token':'Bearer ' + token}, status=200)
+        return Response({'token':'Token ' + token}, status=200)
     else:
         return Response({'error': 'نام کاربری یا رمز عبور اشتباه است!'}, status=400)
 
