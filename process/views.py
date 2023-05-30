@@ -88,6 +88,11 @@ class BookViewset(ModelViewSet):
 class CategoryViewSet(ReadOnlyModelViewSet, CreateModelMixin, UpdateModelMixin, GenericViewSet):
     serializer_class = CategorySerializer
     queryset = BookCategory.objects.all()
+    def get_queryset(self):
+        if self.request.query_params:
+            return BookCategory.objects.all()
+        return BookCategory.objects.filter(parent__isnull=True)
+
     permission_classes = [IsSuperUser]
     filterset_fields = ['parent']
 
