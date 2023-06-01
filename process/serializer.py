@@ -27,8 +27,13 @@ class CreateUserSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data.pop('confirm_password')
         user = get_user_model().objects.create_user(**validated_data)
+        user.set_password(validated_data['password'])
         return user
 
+    def update(self, instance, validated_data):
+        validated_data.pop('confirm_password')
+        instance.set_password(validated_data['password'])
+        return super().update(instance, validated_data)
     def validate_first_name(self, value):
         if re.search('[a-zA-Z]', self.initial_data['first_name']):
             raise serializers.ValidationError('نام نمیتواند شامل حروف انگلیسی باشد!😉')
