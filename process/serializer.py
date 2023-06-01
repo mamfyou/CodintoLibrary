@@ -30,34 +30,29 @@ class CreateUserSerializer(serializers.ModelSerializer):
         return user
 
     def validate_first_name(self, value):
-        if re.search('[a-zA-Z]', value):
+        if re.search('[a-zA-Z]', self.initial_data['first_name']):
             raise serializers.ValidationError('نام نمیتواند شامل حروف انگلیسی باشد!😉')
         return value
 
     def validate_last_name(self, data):
-        if re.search('[a-zA-Z]', data):
+        if re.search('[a-zA-Z]', self.initial_data['last_name']):
             raise serializers.ValidationError('نام خانوادگی نمیتواند شامل حروف انگلیسی باشد!😉')
         return data
 
     def validate_username(self, data):
         farsi_pattern = re.compile(r'[\u0600-\u06FF]+')
         signs = re.compile(r'[!@#$%^&*()_+{}":;\']')
-        if re.search(signs, data):
+        print(data)
+        if re.search(signs, self.initial_data['username']):
             raise serializers.ValidationError('نام کاربری فقط باید از حروف انگلیسی یا اعداد تشکیل شده باشد!')
-        elif re.search(farsi_pattern, data):
+        elif re.search(farsi_pattern, self.initial_data['username']):
             raise serializers.ValidationError('نام کاربری فقط باید از حروف انگلیسی یا اعداد تشکیل شده باشد!')
-        return data
-
-    def validate_picture(self, data):
-        if data is not None:
-            if data.size > 1024 * 1024 * 5:
-                raise serializers.ValidationError('حجم عکس نباید بیشتر از ۵ مگابایت باشد!')
         return data
 
     def validate_phone_number(self, data):
-        if not re.fullmatch(r'09\d{9}', data):
+        if not re.fullmatch(r'09\d{9}', self.initial_data['phone_number']):
             raise serializers.ValidationError('شماره تلفن همراه شما معتبر نیست!')
-        elif re.search('۱۲۳۴۵۶۷۸۹۰', data):
+        elif re.search('۱۲۳۴۵۶۷۸۹۰', self.initial_data['phone_number']):
             raise serializers.ValidationError('شماره تلفن را به صورت اعداد انگلیسی وارد نمایید!')
         return data
 
@@ -66,28 +61,27 @@ class CreateUserSerializer(serializers.ModelSerializer):
         signs = re.compile(r'[!@#$%^&*()_+{}":;\']')
         common_passwords = ['123456', '123456789', 'qwerty', 'password', 'P@ssw0rd', 'Password', '12345678', '111111',
                             '1234567890', '1234567']
-        if data != self.initial_data.get('confirm_password'):
+        if self.initial_data['password'] != self.initial_data.get('confirm_password'):
             raise serializers.ValidationError('رمز عبور و تکرار آن یکسان نیستند!')
 
-        elif len(data) < 8:
+        elif len(self.initial_data['password']) < 8:
             raise serializers.ValidationError('رمز عبور باید حداقل ۸ کاراکتر باشد!')
 
-        elif re.search(farsi_pattern, data):
+        elif re.search(farsi_pattern, self.initial_data['password']):
             raise serializers.ValidationError('رمز عبور نمیتواند شامل حروف فارسی باشد!')
-        elif not re.search(signs, data):
+        elif not re.search(signs, self.initial_data['password']):
             raise serializers.ValidationError('رمز عبور باید حداقل از یک نماد تشکیل شده باشد!')
-        elif data in common_passwords:
+        elif self.initial_data['password'] in common_passwords:
             raise serializers.ValidationError('رمز عبور شما خیلی ساده است!')
-        elif self.initial_data.get('first_name') in data or self.initial_data.get('last_name') in data:
+        elif self.initial_data.get('first_name') in self.initial_data['password'] or self.initial_data.get('last_name') in self.initial_data['password']:
             raise serializers.ValidationError('رمز عبور نباید شامل نام شما باشد!')
-        return data
+        return self.initial_data['password']
 
     def validate(self, data):
         self.validate_username(data)
         self.validate_first_name(data)
         self.validate_last_name(data)
         self.validate_phone_number(data)
-        self.validate_picture(data)
         self.validate_password(data)
         return super().validate(data)
 
