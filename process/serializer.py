@@ -40,6 +40,7 @@ class CreateUserSerializer(serializers.ModelSerializer):
         instance.set_password(validated_data['password'])
         instance.is_active = True
         instance.is_staff = True
+        instance.username = validated_data['username']
         instance.save()
         return super().update(instance, validated_data)
     def validate_first_name(self, value):
