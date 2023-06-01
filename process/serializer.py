@@ -15,11 +15,13 @@ class CreateUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = get_user_model()
         fields = ['id', 'first_name', 'last_name', 'username', 'password', 'confirm_password', 'phone_number', 'email',
-                  'telegram_id', 'picture', 'is_superuser']
+                  'telegram_id', 'picture', 'is_superuser', 'is_staff', 'is_active']
         extra_kwargs = {
             'password': {'write_only': True},
             'picture': {'read_only': True},
-            'is_superuser': {'read_only': True}
+            'is_superuser': {'read_only': True},
+            'is_staff': {'read_only': True},
+            'is_active': {'read_only': True},
         }
 
     confirm_password = serializers.CharField(max_length=128, write_only=True)
@@ -28,11 +30,17 @@ class CreateUserSerializer(serializers.ModelSerializer):
         validated_data.pop('confirm_password')
         user = get_user_model().objects.create_user(**validated_data)
         user.set_password(validated_data['password'])
+        user.is_active = True
+        user.is_staff = True
+        user.save()
         return user
 
     def update(self, instance, validated_data):
         validated_data.pop('confirm_password')
         instance.set_password(validated_data['password'])
+        instance.is_active = True
+        instance.is_staff = True
+        instance.save()
         return super().update(instance, validated_data)
     def validate_first_name(self, value):
         if re.search('[a-zA-Z]', self.initial_data['first_name']):
