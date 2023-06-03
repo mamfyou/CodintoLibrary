@@ -116,17 +116,8 @@ class PanelCommentsSerializer(serializers.ModelSerializer):
 class PanelNotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification
-        fields = ['id', 'type', 'title', 'description', 'is_read', 'book_thumbnail']
-        read_only_fields = ['id', 'type', 'title', 'description', 'book_thumbnail']
-
-    def get_book_thumbnail(self, obj):
-        if obj.book is not None:
-            print(obj)
-            book = obj.book
-            request = self.context['request']
-            photo_url = book.thumbnail.url
-            return request.build_absolute_uri(photo_url)
-        return None
+        fields = ['id', 'type', 'title', 'description', 'is_read', 'picture']
+        read_only_fields = ['id', 'type', 'title', 'description', 'picture']
 
     def validate(self, attrs):
         notif = Notification.objects.get(id=self.instance.id)
@@ -136,7 +127,6 @@ class PanelNotificationSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('این پیام قبلا خوانده شده است!')
         return attrs
 
-    book_thumbnail = serializers.SerializerMethodField(method_name='get_book_thumbnail')
 
 
 class PanelBookshelfSerializer(serializers.ModelSerializer):
